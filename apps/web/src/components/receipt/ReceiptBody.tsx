@@ -49,6 +49,28 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function barcodeBits(value: string): string {
+  return value
+    .split('')
+    .map((char) => char.charCodeAt(0).toString(2).padStart(8, '0'))
+    .join('');
+}
+
+function ReceiptBarcode({ value }: { value: string }) {
+  const bits = `1010${barcodeBits(value)}0101`;
+  const width = bits.length;
+  return (
+    <div className="receipt-barcode" aria-hidden>
+      <svg viewBox={`0 0 ${String(width)} 54`} role="img" aria-label={`Barcode ${value}`}>
+        <rect x="0" y="0" width={String(width)} height="54" fill="#fff" />
+        {bits.split('').map((bit, index) => (
+          bit === '1' ? <rect key={index} x={String(index)} y="0" width="1" height="54" fill="#000" /> : null
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 /** Image-matched 80mm receipt layout using server-calculated amounts only. */
 export function ReceiptBody({ receipt }: { receipt: Receipt }) {
   const when = formatDateTime(new Date(receipt.createdAt), DEFAULT_BUSINESS_TIMEZONE);
@@ -98,7 +120,7 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
         <span>{formatRs(receipt.total)}</span>
       </div>
       <DetailRow label="Payment Method" value={PAYMENT_METHOD_LABEL[receipt.paymentMethod]} />
-      <div className="receipt-barcode" aria-hidden />
+      <ReceiptBarcode value={receipt.billNumber} />
       <div className="receipt-barcode-text">{receipt.billNumber}</div>
       {receipt.footer !== null && <div className="receipt-footer">{receipt.footer}</div>}
       {receipt.exchangeReturnPolicy !== null && (
