@@ -1,0 +1,12 @@
+// Prisma schema, split by domain area (DATABASE.md §4). Each file ≤ 200 lines.
+// Naming: PascalCase models mapped to plural snake_case tables, camelCase fields mapped to snake_case.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}

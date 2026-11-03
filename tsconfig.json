@@ -1,0 +1,13 @@
+{
+  "//": "Resolution-only config for dependency-cruiser; each package has its own tsconfig for type checking.",
+  "extends": "./packages/config-typescript/base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./apps/web/src/*"]
+    }
+  },
+  "files": []
+}

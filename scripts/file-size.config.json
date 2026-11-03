@@ -1,0 +1,7 @@
+{
+  "maxLines": 200,
+  "warnLines": 150,
+  "include": ["**/*.{ts,tsx,js,jsx,mjs,cjs,css,graphql,prisma,sql,sh}"],
+  "exclude": [],
+  "exceptions": []
+}

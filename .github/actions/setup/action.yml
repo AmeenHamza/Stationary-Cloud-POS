@@ -1,0 +1,12 @@
+name: Setup workspace
+description: Node LTS, pnpm from packageManager, cached frozen install
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v5
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile

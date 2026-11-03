@@ -1,0 +1,1330 @@
+input AddCustomerCreditInput {
+  """Positive; the entry type gives the sign."""
+  amount: Money!
+  customerId: ID!
+  idempotencyKey: ID!
+  note: String
+}
+
+input AddVendorPurchaseInput {
+  """Positive; the entry type gives the sign."""
+  amount: Money!
+
+  """What was bought (D-20: not itemised)."""
+  description: String
+  idempotencyKey: ID!
+  vendorId: ID!
+}
+
+input AdjustStockInput {
+  direction: AdjustmentDirection!
+  idempotencyKey: ID!
+  note: String
+  productId: ID!
+  quantityPieces: Int!
+  reason: AdjustmentReason!
+}
+
+enum AdjustmentDirection {
+  DECREASE
+  INCREASE
+}
+
+enum AdjustmentReason {
+  COUNT_CORRECTION
+  DAMAGED
+  LOST
+  OTHER
+}
+
+input AiAskInput {
+  """≤ 10 turns, ≤ 4,000 characters"""
+  history: [AiChatTurnInput!]
+  language: AiLanguage!
+  question: String!
+}
+
+input AiBusinessReportInput {
+  """CUSTOM only: first day, YYYY-MM-DD"""
+  from: String
+  language: AiLanguage!
+  period: AiReportPeriod!
+
+  """CUSTOM only: last day (≤ 92 days)"""
+  to: String
+}
+
+enum AiChatRole {
+  ASSISTANT
+  USER
+}
+
+input AiChatTurnInput {
+  role: AiChatRole!
+  text: String!
+}
+
+enum AiLanguage {
+  ENGLISH
+  ROMAN_URDU
+  URDU
+}
+
+input AiLanguageInput {
+  language: AiLanguage!
+}
+
+enum AiReportPeriod {
+  CUSTOM
+  DAILY
+  MONTHLY
+  WEEKLY
+}
+
+type AiResult {
+  """Served from the 15-minute cache (ADR-026)"""
+  cached: Boolean!
+  generatedAt: DateTime!
+  language: AiLanguage!
+  text: String!
+}
+
+input AiSalesInsightsInput {
+  language: AiLanguage!
+
+  """7, 14, 30, 60 or 90"""
+  periodDays: Int!
+}
+
+input BillGstInput {
+  applied: Boolean!
+
+  """Required when applied."""
+  rate: Percent
+}
+
+"""Calendar date YYYY-MM-DD in the business time zone (Asia/Karachi)."""
+scalar BusinessDate
+
+type CatalogBulkChangedEvent implements ShopEvent {
+  changedCount: Int!
+  importJobId: ID!
+  occurredAt: DateTime!
+
+  """IMPORT."""
+  reason: String!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+input CategoriesFilter {
+  search: String
+}
+
+type Category {
+  description: String
+  iconEmoji: String
+  id: ID!
+  name: String!
+  productCount: Int!
+  version: Int!
+}
+
+enum CategoryChange {
+  CREATED
+  DELETED
+  UPDATED
+}
+
+type CategoryChangedEvent implements ShopEvent {
+  category: CategorySnapshot
+  categoryId: ID!
+  change: CategoryChange!
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+type CategoryConnection {
+  nodes: [Category!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type CategorySnapshot {
+  description: String
+  iconEmoji: String
+  id: ID!
+  name: String!
+  version: Int!
+}
+
+input ChangePasswordInput {
+  currentPassword: String!
+  newPassword: String!
+}
+
+input CloneProductInput {
+  barcode: String!
+  idempotencyKey: ID!
+  initialStockPieces: Int!
+  sourceProductId: ID!
+}
+
+input CreateCategoryInput {
+  description: String
+  iconEmoji: String
+  name: String!
+}
+
+input CreateCustomerInput {
+  address: String
+  email: String
+  name: String!
+  phone: String
+}
+
+input CreateProductInput {
+  barcode: String
+  baseUnitLabel: String!
+  boxPrice: Money
+  categoryId: ID
+  costPrice: Money
+  idempotencyKey: ID!
+  initialStockPieces: Int!
+
+  """In `lowStockThresholdUnit`; stored in pieces (BR-01)."""
+  lowStockThreshold: Int!
+  lowStockThresholdUnit: SaleUnit!
+  name: String!
+  nameUrdu: String
+  piecesPerBox: Int!
+  salePrice: Money!
+  taxRate: Percent!
+}
+
+input CreateSaleInput {
+  billGst: BillGstInput!
+
+  """Optional custom lines not in the catalogue."""
+  customLines: [CustomSaleLineInput!]
+
+  """Required for UDHAAR (D-15)."""
+  customerId: ID
+  discount: DiscountInput!
+
+  """The total the cashier saw (PRICE_CHANGED if different)."""
+  expectedTotal: Money!
+  idempotencyKey: ID!
+
+  """Catalog lines from products."""
+  lines: [SaleLineInput!]!
+  paymentMethod: PaymentMethod!
+}
+
+type CreateSalePayload {
+  order: Order!
+  receipt: Receipt!
+
+  """True when the key matched an existing sale."""
+  replayed: Boolean!
+  stockWarnings: [StockWarning!]!
+}
+
+input CreateStaffUserInput {
+  fullName: String!
+  password: String!
+  role: UserRole!
+  username: String!
+}
+
+input CreateVendorInput {
+  address: String
+  email: String
+  name: String!
+  phone: String
+  productsSupplied: String
+}
+
+input CustomSaleLineInput {
+  name: String!
+  quantity: Int!
+  taxRate: Percent!
+  unit: SaleUnit!
+  unitPrice: Money!
+}
+
+type Customer {
+  address: String
+  archivedAt: DateTime
+
+  """
+  Customers: + owed to the shop, − advance (Q25). Vendors: + the shop owes them.
+  """
+  balance: Money!
+  createdAt: DateTime!
+  email: String
+  id: ID!
+  name: String!
+  phone: String
+  version: Int!
+}
+
+type CustomerBalanceChangedEvent implements ShopEvent {
+  balance: Money!
+  customerId: ID!
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+  version: Int!
+}
+
+type CustomerConnection {
+  nodes: [Customer!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+enum CustomerEntryType {
+  CREDIT_SALE
+  MANUAL_CREDIT
+  OPENING_BALANCE
+  PAYMENT
+  REFUND_CREDIT
+}
+
+type CustomerLedgerEntry {
+  """Signed: + raises the balance, − lowers it."""
+  amount: Money!
+  balanceAfter: Money!
+  businessDate: BusinessDate!
+  createdAt: DateTime!
+  id: ID!
+  note: String
+
+  """The Udhaar bill (CREDIT_SALE)."""
+  orderId: ID
+  paymentMethod: PaymentMethod
+
+  """The refund (REFUND_CREDIT, A-03)."""
+  refundId: ID
+  type: CustomerEntryType!
+}
+
+type CustomerLedgerEntryConnection {
+  nodes: [CustomerLedgerEntry!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type DailySales {
+  date: BusinessDate!
+  total: Money!
+}
+
+type Dashboard {
+  """Total categories."""
+  categoryCount: Int!
+
+  """Active customers."""
+  customerCount: Int!
+
+  """Σ positive customer khata balances."""
+  customerDues: Money!
+
+  """At most 31 rows."""
+  dailySales(
+    """1–31 days ending on the dashboard date."""
+    days: Int! = 7
+    productId: ID
+  ): [DailySales!]!
+
+  """Today in Asia/Karachi unless a date was given."""
+  date: BusinessDate!
+
+  """Discounts given (Q18 periods)."""
+  discountSummary: PeriodTotals!
+  inventory: InventoryValue!
+
+  """12 months, with the same month a year earlier."""
+  monthlySales(year: Int!): [MonthlySales!]!
+
+  """At most 6 rows (Q31)."""
+  paymentMethods(period: ReportPeriod! = THIS_MONTH): [PaymentMethodTotal!]!
+
+  """At most 10 rows, by units sold."""
+  productRanking(
+    """Look-back window, at most 90 days."""
+    days: Int! = 30
+    direction: RankingDirection!
+
+    """At most 10."""
+    limit: Int! = 5
+  ): [ProductSales!]!
+
+  """Product tax + Bill GST (Q30)."""
+  taxSummary: TaxSummary!
+
+  """Net sales from month start to date."""
+  thisMonthSales: Money!
+
+  """Net sales from Monday to date."""
+  thisWeekSales: Money!
+  today: DaySummary!
+
+  """Active vendors."""
+  vendorCount: Int!
+
+  """Σ positive vendor balances."""
+  vendorOwes: Money!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type DaySummary {
+  """Bills of the day not fully refunded (Q18)."""
+  billCount: Int!
+  discountTotal: Money!
+
+  """Bills of the day minus refunds made that day (Q28)."""
+  netSales: Money!
+  refundTotal: Money!
+
+  """Product tax plus Bill GST (Q30)."""
+  taxTotal: Money!
+}
+
+input DiscountInput {
+  """FLAT only."""
+  amount: Money
+
+  """PERCENT only."""
+  percent: Percent
+  type: DiscountType!
+}
+
+enum DiscountType {
+  FLAT
+  NONE
+  PERCENT
+}
+
+type ImportJob {
+  createdAt: DateTime!
+  errorSummary: String
+  failedRows: Int!
+  fileName: String!
+  finishedAt: DateTime
+  id: ID!
+  processedRows: Int!
+  status: ImportStatus!
+  succeededRows: Int!
+  totalRows: Int!
+}
+
+type ImportJobRow {
+  error: String
+
+  """Job id and spreadsheet line, e.g. "<job>:12"."""
+  id: ID!
+  productId: ID
+
+  """Spreadsheet line, 2 = first data row."""
+  rowNumber: Int!
+  status: ImportRowStatus!
+}
+
+type ImportJobRowConnection {
+  nodes: [ImportJobRow!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type ImportProgressedEvent implements ShopEvent {
+  failedRows: Int!
+  importJobId: ID!
+  occurredAt: DateTime!
+  processedRows: Int!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  status: ImportStatus!
+  succeededRows: Int!
+  totalRows: Int!
+  type: String!
+}
+
+enum ImportRowStatus {
+  FAILED
+  PENDING
+  SKIPPED
+  SUCCEEDED
+}
+
+enum ImportStatus {
+  COMPLETED
+  FAILED
+  QUEUED
+  RUNNING
+}
+
+type InventoryValue {
+  """Σ stock × cost price, positive stock only."""
+  costValue: Money!
+
+  """Active products."""
+  productCount: Int!
+
+  """Σ stock × piece price, positive stock only."""
+  sellingValue: Money!
+}
+
+input LoginInput {
+  password: String!
+  username: String!
+}
+
+type LowStockCountChangedEvent implements ShopEvent {
+  crossedProductIds: [ID!]!
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+"""
+Decimal amount in rupees as a string with exactly two decimals, e.g. "283.20".
+"""
+scalar Money
+
+type MonthlySales {
+  """1–12."""
+  month: Int!
+  sameMonthLastYear: Money!
+  total: Money!
+}
+
+type Mutation {
+  """"Add Udhaar": MANUAL_CREDIT [K]."""
+  addCustomerCredit(input: AddCustomerCreditInput!): Customer!
+
+  """"Add Purchase (Maal Khareeda)" [K]; no stock change."""
+  addVendorPurchase(input: AddVendorPurchaseInput!): Vendor!
+  adjustStock(input: AdjustStockInput!): Product!
+  aiAsk(input: AiAskInput!): AiResult!
+  aiBusinessReport(input: AiBusinessReportInput!): AiResult!
+  aiDiscountAdvice(input: AiLanguageInput!): AiResult!
+  aiInventoryForecast(input: AiLanguageInput!): AiResult!
+  aiPurchaseRecommendations(input: AiLanguageInput!): AiResult!
+  aiSalesInsights(input: AiSalesInsightsInput!): AiResult!
+
+  """Needs a zero balance (BALANCE_NOT_ZERO)."""
+  archiveCustomer(id: ID!): Customer!
+  archiveProduct(id: ID!): Product!
+
+  """Needs a zero balance (BALANCE_NOT_ZERO)."""
+  archiveVendor(id: ID!): Vendor!
+  changePassword(input: ChangePasswordInput!): Boolean!
+  clearAiApiKey: ShopSettings!
+  cloneProduct(input: CloneProductInput!): Product!
+  createCategory(input: CreateCategoryInput!): Category!
+  createCustomer(input: CreateCustomerInput!): Customer!
+  createProduct(input: CreateProductInput!): Product!
+  createSale(input: CreateSaleInput!): CreateSalePayload!
+  createStaffUser(input: CreateStaffUserInput!): StaffUser!
+  createVendor(input: CreateVendorInput!): Vendor!
+
+  """Moves its products to Uncategorised (Q16b)."""
+  deleteCategory(id: ID!): Boolean!
+  login(input: LoginInput!): Viewer!
+  logout: Boolean!
+
+  """PAYMENT [K]; never UDHAAR."""
+  payVendor(input: PayVendorInput!): Vendor!
+
+  """PAYMENT [K]; never UDHAAR."""
+  receiveCustomerPayment(input: ReceiveCustomerPaymentInput!): Customer!
+  refundOrder(input: RefundOrderInput!): RefundOrderPayload!
+  resetStaffPassword(input: ResetStaffPasswordInput!): StaffUser!
+  restockProduct(input: RestockInput!): Product!
+  restoreCustomer(id: ID!): Customer!
+  restoreProduct(id: ID!): Product!
+  restoreVendor(id: ID!): Vendor!
+  setAiApiKey(input: SetAiApiKeyInput!): ShopSettings!
+  setStaffUserStatus(input: SetStaffUserStatusInput!): StaffUser!
+  signUp(input: SignUpInput!): Boolean!
+  updateCategory(input: UpdateCategoryInput!): Category!
+  updateCustomer(input: UpdateCustomerInput!): Customer!
+  updateProduct(input: UpdateProductInput!): Product!
+  updateShopSettings(input: UpdateShopSettingsInput!): ShopSettings!
+  updateStaffUser(input: UpdateStaffUserInput!): StaffUser!
+  updateVendor(input: UpdateVendorInput!): Vendor!
+}
+
+type Order {
+  billGstAmount: Money!
+
+  """Null when Bill GST was not applied."""
+  billGstRate: Percent
+
+  """ORD-YYYYMMDD-NNN (BR-05)."""
+  billNumber: String!
+  businessDate: BusinessDate!
+  cashierName: String!
+  createdAt: DateTime!
+  customerId: ID
+  customerName: String
+  discountTotal: Money!
+  discountType: DiscountType!
+
+  """The flat amount, or the percentage for PERCENT."""
+  discountValue: Money!
+  id: ID!
+  paymentMethod: PaymentMethod!
+  productTaxTotal: Money!
+  refundedTotal: Money!
+  status: OrderStatus!
+  subtotal: Money!
+  total: Money!
+  version: Int!
+}
+
+type OrderConnection {
+  nodes: [Order!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type OrderCreatedEvent implements ShopEvent {
+  billNumber: String!
+  businessDate: BusinessDate!
+  occurredAt: DateTime!
+  orderId: ID!
+  paymentMethod: PaymentMethod!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  total: Money!
+  type: String!
+}
+
+type OrderDetail {
+  billGstAmount: Money!
+
+  """Null when Bill GST was not applied."""
+  billGstRate: Percent
+
+  """ORD-YYYYMMDD-NNN (BR-05)."""
+  billNumber: String!
+  businessDate: BusinessDate!
+  cashierName: String!
+  createdAt: DateTime!
+  customerId: ID
+  customerName: String
+  discountTotal: Money!
+  discountType: DiscountType!
+
+  """The flat amount, or the percentage for PERCENT."""
+  discountValue: Money!
+  id: ID!
+
+  """At most 100 (Q34)."""
+  lines: [OrderLine!]!
+  paymentMethod: PaymentMethod!
+  productTaxTotal: Money!
+
+  """Σ Bill GST returned by earlier refunds."""
+  refundedGstShare: Money!
+  refundedTotal: Money!
+  status: OrderStatus!
+  subtotal: Money!
+  total: Money!
+  version: Int!
+}
+
+type OrderLine {
+  barcode: String
+  id: ID!
+  lineDiscount: Money!
+  lineGross: Money!
+  lineNet: Money!
+  lineNo: Int!
+  lineTax: Money!
+
+  """1 for PIECE; pieces per box at sale time for BOX."""
+  piecesPerUnit: Int!
+  productId: ID
+  productName: String!
+  productNameUrdu: String
+  quantity: Int!
+
+  """Σ earlier refunds of this line (net + product tax)."""
+  refundedAmount: Money!
+  refundedQuantity: Int!
+  saleUnit: SaleUnit!
+  taxRate: Percent!
+  unitPrice: Money!
+}
+
+type OrderRefundedEvent implements ShopEvent {
+  occurredAt: DateTime!
+  orderId: ID!
+  refundedTotal: Money!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  status: OrderStatus!
+  type: String!
+  version: Int!
+}
+
+enum OrderStatus {
+  COMPLETED
+  PARTIALLY_REFUNDED
+  REFUNDED
+}
+
+input OrdersFilter {
+  """e.g. "ORD-20261028"."""
+  billNumberPrefix: String
+  customerId: ID
+  from: BusinessDate
+
+  """Older than 90 days too (F-35)."""
+  includeArchived: Boolean
+  status: OrderStatus
+  to: BusinessDate
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+input PartyFilter {
+  includeArchived: Boolean
+
+  """Name, or phone digits (3 or more)."""
+  search: String
+  withBalanceOnly: Boolean
+}
+
+input PayVendorInput {
+  """Positive; the entry type gives the sign."""
+  amount: Money!
+  idempotencyKey: ID!
+
+  """Any method except UDHAAR."""
+  method: PaymentMethod!
+  note: String
+  vendorId: ID!
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  EASYPAISA
+  JAZZCASH
+  UDHAAR
+}
+
+type PaymentMethodTotal {
+  billCount: Int!
+  method: PaymentMethod!
+
+  """Bills minus refunds made in the period."""
+  total: Money!
+}
+
+"""Percentage 0–100 as a string with two decimals, e.g. "18.00"."""
+scalar Percent
+
+type PeriodTotals {
+  thisMonth: Money!
+
+  """Since Monday (Q18)."""
+  thisWeek: Money!
+  today: Money!
+}
+
+type Product {
+  archivedAt: DateTime
+  barcode: String
+  baseUnitLabel: String!
+
+  """Set only when sold by the box (D-17)."""
+  boxPrice: Money
+
+  """Null means Uncategorised."""
+  categoryId: ID
+  categoryName: String
+  costPrice: Money
+  id: ID!
+  isLowStock: Boolean!
+  lowStockThresholdPieces: Int!
+
+  """Unit the threshold was entered in (display only)."""
+  lowStockThresholdUnit: SaleUnit!
+  name: String!
+  nameUrdu: String
+  piecesPerBox: Int!
+
+  """Per piece, before product tax (D-07)."""
+  salePrice: Money!
+
+  """May be negative after selling above stock (D-16)."""
+  stockPieces: Int!
+  taxRate: Percent!
+  version: Int!
+}
+
+enum ProductChange {
+  ARCHIVED
+  CREATED
+  RESTORED
+  UPDATED
+}
+
+type ProductChangedEvent implements ShopEvent {
+  change: ProductChange!
+  occurredAt: DateTime!
+  product: ProductSnapshot
+  productId: ID!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+  version: Int!
+}
+
+type ProductConnection {
+  nodes: [Product!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+input ProductFilter {
+  categoryId: ID
+  includeArchived: Boolean
+  lowStockOnly: Boolean
+  search: String
+  uncategorised: Boolean
+}
+
+type ProductSales {
+  name: String!
+  productId: ID!
+  total: Money!
+
+  """Pieces sold minus pieces returned."""
+  units: Int!
+}
+
+type ProductSnapshot {
+  archivedAt: DateTime
+  barcode: String
+  baseUnitLabel: String!
+
+  """Set only when sold by the box (D-17)."""
+  boxPrice: Money
+
+  """Null means Uncategorised."""
+  categoryId: ID
+  id: ID!
+  isLowStock: Boolean!
+  lowStockThresholdPieces: Int!
+
+  """Unit the threshold was entered in (display only)."""
+  lowStockThresholdUnit: SaleUnit!
+  name: String!
+  nameUrdu: String
+  piecesPerBox: Int!
+
+  """Per piece, before product tax (D-07)."""
+  salePrice: Money!
+
+  """May be negative after selling above stock (D-16)."""
+  stockPieces: Int!
+  taxRate: Percent!
+  version: Int!
+}
+
+enum ProductSort {
+  NAME_ASC
+  NAME_DESC
+  PRICE_ASC
+  PRICE_DESC
+}
+
+type Query {
+  categories(after: String, filter: CategoriesFilter, first: Int! = 50): CategoryConnection!
+  category(id: ID!): Category
+  customer(id: ID!): Customer
+
+  """Newest first."""
+  customerLedger(
+    after: String
+    customerId: ID!
+    first: Int! = 50
+
+    """Older than 90 days too (F-35)."""
+    includeArchived: Boolean
+  ): CustomerLedgerEntryConnection!
+  customers(after: String, filter: PartyFilter, first: Int! = 50): CustomerConnection!
+  dashboard(date: BusinessDate): Dashboard!
+
+  """Imports you started."""
+  importJob(id: ID!): ImportJob
+
+  """Spreadsheet order; filter by status."""
+  importJobRows(after: String, first: Int! = 50, jobId: ID!, status: ImportRowStatus): ImportJobRowConnection!
+  lowStockCount: Int!
+
+  """Active products at or below their threshold."""
+  lowStockProducts(after: String, first: Int! = 50): ProductConnection!
+  me: Viewer!
+  order(id: ID!): OrderDetail
+
+  """Reprint (SYSTEM_DESIGN.md §3.5)."""
+  orderReceipt(orderId: ID!): Receipt!
+
+  """Newest first; 90 days unless dated or archived."""
+  orders(after: String, filter: OrdersFilter, first: Int! = 50): OrderConnection!
+  product(id: ID!): Product
+
+  """Exact barcode, active products only."""
+  productByBarcode(barcode: String!): Product
+  products(after: String, filter: ProductFilter, first: Int! = 50, sort: ProductSort! = NAME_ASC): ProductConnection!
+
+  """At most 50 ids: cart and visible-row reconciliation."""
+  productsByIds(ids: [ID!]!): [Product!]!
+
+  """
+  Confirms a sale whose response was lost: the bill, or null (SYSTEM_DESIGN §3.4).
+  """
+  saleStatus(idempotencyKey: ID!): Order
+  serverInfo: ServerInfo!
+  shopSettings: ShopSettings!
+  staffUsers(after: String, filter: StaffUsersFilter, first: Int! = 50): StaffUserConnection!
+  vendor(id: ID!): Vendor
+
+  """Newest first."""
+  vendorLedger(
+    after: String
+    first: Int! = 50
+
+    """Older than 90 days too (F-35)."""
+    includeArchived: Boolean
+    vendorId: ID!
+  ): VendorLedgerEntryConnection!
+  vendors(after: String, filter: PartyFilter, first: Int! = 50): VendorConnection!
+}
+
+enum RankingDirection {
+  HIGHEST
+  LOWEST
+}
+
+type Receipt {
+  address: String
+  billGstAmount: Money!
+  billGstRate: Percent
+  billNumber: String!
+  businessDate: BusinessDate!
+  cashierName: String!
+  createdAt: DateTime!
+
+  """Udhaar: khata balance after this bill."""
+  customerBalance: Money
+
+  """Udhaar bills only."""
+  customerName: String
+  discountTotal: Money!
+  exchangeReturnPolicy: String
+  footer: String
+  lines: [ReceiptLine!]!
+  logoDataUrl: String
+  orderId: ID!
+  paymentMethod: PaymentMethod!
+  phone: String
+  productTaxTotal: Money!
+  shopName: String!
+  subtotal: Money!
+  total: Money!
+}
+
+type ReceiptLine {
+  """Quantity × unit price, before discount and tax."""
+  lineTotal: Money!
+  name: String!
+  nameUrdu: String
+  quantity: Int!
+  unit: SaleUnit!
+  unitPrice: Money!
+}
+
+input ReceiveCustomerPaymentInput {
+  """Positive; the entry type gives the sign."""
+  amount: Money!
+  customerId: ID!
+  idempotencyKey: ID!
+
+  """Any method except UDHAAR."""
+  method: PaymentMethod!
+  note: String
+}
+
+input RefundLineInput {
+  orderLineId: ID!
+  quantity: Int!
+}
+
+input RefundOrderInput {
+  """The amount the cashier saw (QUOTE_MISMATCH if different)."""
+  expectedAmount: Money!
+  idempotencyKey: ID!
+
+  """Or set refundAll."""
+  lines: [RefundLineInput!]
+  orderId: ID!
+  reason: String
+  refundAll: Boolean
+}
+
+type RefundOrderPayload {
+  order: OrderDetail!
+  refund: RefundSummary!
+  replayed: Boolean!
+}
+
+enum RefundSettlement {
+  KHATA_CREDIT
+  ORIGINAL_METHOD
+}
+
+type RefundSummary {
+  amount: Money!
+  billGstShare: Money!
+  createdAt: DateTime!
+  id: ID!
+  reason: String
+
+  """KHATA_CREDIT for Udhaar bills (A-03)."""
+  settlement: RefundSettlement!
+}
+
+enum ReportPeriod {
+  THIS_MONTH
+  THIS_WEEK
+  TODAY
+}
+
+input ResetStaffPasswordInput {
+  id: ID!
+  newPassword: String!
+}
+
+input RestockInput {
+  boxes: Int!
+  idempotencyKey: ID!
+  note: String
+  pieces: Int!
+  productId: ID!
+}
+
+type ResyncRequiredEvent implements ShopEvent {
+  occurredAt: DateTime!
+
+  """REDIS_RECONNECTED"""
+  reason: String!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+input SaleLineInput {
+  productId: ID!
+  quantity: Int!
+  unit: SaleUnit!
+}
+
+enum SaleUnit {
+  BOX
+  PIECE
+}
+
+type ServerInfo {
+  """Today's date in the business time zone."""
+  businessDate: BusinessDate!
+  version: String!
+}
+
+input SetAiApiKeyInput {
+  apiKey: String!
+}
+
+input SetStaffUserStatusInput {
+  id: ID!
+  status: UserStatus!
+}
+
+type SettingsChangedEvent implements ShopEvent {
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+  version: Int!
+}
+
+interface ShopEvent {
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+type ShopSettings {
+  address: String
+  aiKeyConfigured: Boolean!
+  aiKeyLast4: String
+  defaultBillGstRate: Percent!
+  exchangeReturnPolicy: String
+  logoDataUrl: String
+  phone: String
+  receiptFooter: String
+  shopName: String!
+  updatedAt: DateTime!
+  version: Int!
+}
+
+input SignUpInput {
+  fullName: String!
+  password: String!
+  role: UserRole!
+  signupSecret: String!
+  username: String!
+}
+
+type StaffUser {
+  createdAt: DateTime!
+  fullName: String!
+  id: ID!
+  role: UserRole!
+  status: UserStatus!
+  username: String!
+
+  """Optimistic-lock version; send it back with updateStaffUser."""
+  version: Int!
+}
+
+type StaffUserConnection {
+  nodes: [StaffUser!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+input StaffUsersFilter {
+  search: String
+  status: UserStatus
+}
+
+type StockChangedEvent implements ShopEvent {
+  """At most 100: one transaction’s lines."""
+  items: [StockLevel!]!
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+}
+
+type StockLevel {
+  isLowStock: Boolean!
+  productId: ID!
+  stockPieces: Int!
+  version: Int!
+}
+
+type StockWarning {
+  productId: ID!
+  productName: String!
+  stockAfter: Int!
+}
+
+type Subscription {
+  shopEvents: ShopEvent!
+}
+
+type TaxSummary {
+  """This month’s tax per bill."""
+  averagePerBill: Money!
+  thisMonth: Money!
+  today: Money!
+}
+
+input UpdateCategoryInput {
+  description: String
+  iconEmoji: String
+  id: ID!
+  name: String!
+  version: Int!
+}
+
+input UpdateCustomerInput {
+  address: String
+  email: String
+  id: ID!
+  name: String!
+  phone: String
+  version: Int!
+}
+
+input UpdateProductInput {
+  barcode: String
+  baseUnitLabel: String!
+  boxPrice: Money
+  categoryId: ID
+  costPrice: Money
+  id: ID!
+
+  """In `lowStockThresholdUnit`; stored in pieces (BR-01)."""
+  lowStockThreshold: Int!
+  lowStockThresholdUnit: SaleUnit!
+  name: String!
+  nameUrdu: String
+  piecesPerBox: Int!
+  salePrice: Money!
+  taxRate: Percent!
+  version: Int!
+}
+
+input UpdateShopSettingsInput {
+  address: String
+  defaultBillGstRate: Percent!
+  exchangeReturnPolicy: String
+  logoDataUrl: String
+  phone: String
+  receiptFooter: String
+  shopName: String!
+  version: Int!
+}
+
+input UpdateStaffUserInput {
+  fullName: String!
+  id: ID!
+  role: UserRole!
+  version: Int!
+}
+
+input UpdateVendorInput {
+  address: String
+  email: String
+  id: ID!
+  name: String!
+  phone: String
+  productsSupplied: String
+  version: Int!
+}
+
+enum UserRole {
+  ADMIN
+  CASHIER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+type Vendor {
+  address: String
+  archivedAt: DateTime
+
+  """
+  Customers: + owed to the shop, − advance (Q25). Vendors: + the shop owes them.
+  """
+  balance: Money!
+  createdAt: DateTime!
+  email: String
+  id: ID!
+  name: String!
+  phone: String
+  productsSupplied: String
+  version: Int!
+}
+
+type VendorBalanceChangedEvent implements ShopEvent {
+  balance: Money!
+  occurredAt: DateTime!
+  schemaVersion: Int!
+
+  """Outbox sequence number; the client de-duplication key."""
+  seq: ID!
+  type: String!
+  vendorId: ID!
+  version: Int!
+}
+
+type VendorConnection {
+  nodes: [Vendor!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+enum VendorEntryType {
+  OPENING_BALANCE
+  PAYMENT
+  PURCHASE
+}
+
+type VendorLedgerEntry {
+  """Signed: + raises the balance, − lowers it."""
+  amount: Money!
+  balanceAfter: Money!
+  businessDate: BusinessDate!
+  createdAt: DateTime!
+  id: ID!
+  note: String
+  paymentMethod: PaymentMethod
+  type: VendorEntryType!
+}
+
+type VendorLedgerEntryConnection {
+  nodes: [VendorLedgerEntry!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type Viewer {
+  fullName: String!
+  id: ID!
+  permissions: [String!]!
+  role: UserRole!
+  username: String!
+}

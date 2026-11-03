@@ -1,0 +1,26 @@
+{
+  "name": "@pos/legacy-migration",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "migrate": "tsx src/main.ts"
+  },
+  "devDependencies": {
+    "@pos/config-typescript": "workspace:*",
+    "@pos/contracts": "workspace:*",
+    "@pos/database": "workspace:*",
+    "@pos/domain": "workspace:*",
+    "@pos/testkit": "workspace:*",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

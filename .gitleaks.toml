@@ -1,0 +1,12 @@
+title = "stationery-pos secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfile hashes and screenshots are not secrets"
+paths = [
+  '''pnpm-lock\.yaml''',
+  '''Screen Shots/''',
+  '''node_modules/''',
+]

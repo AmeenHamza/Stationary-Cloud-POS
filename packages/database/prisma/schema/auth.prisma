@@ -1,0 +1,62 @@
+// Staff accounts and server-side sessions (DATABASE.md §4.1–4.2, DECISIONS.md ADR-011).
+
+enum UserRole {
+  ADMIN
+  CASHIER
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+
+  @@map("user_status")
+}
+
+model User {
+  id                String     @id @default(uuid(7)) @db.Uuid
+  username          String     @unique(map: "users_username_uq") @db.Citext
+  fullName          String     @map("full_name") @db.VarChar(120)
+  passwordHash      String     @map("password_hash")
+  role              UserRole
+  status            UserStatus @default(ACTIVE)
+  passwordChangedAt DateTime   @default(now()) @map("password_changed_at") @db.Timestamptz(3)
+  createdById       String?    @map("created_by_id") @db.Uuid
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  version           Int        @default(1)
+
+  createdBy      User?                 @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, map: "users_created_by_fk")
+  createdUsers   User[]                @relation("UserCreatedBy")
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  settings       ShopSettings[]
+  stockMovements StockMovement[]
+  importJobs     ImportJob[]
+  customerLedger CustomerLedgerEntry[]
+  vendorLedger   VendorLedgerEntry[]
+  orders         Order[]
+  refunds        Refund[]
+
+  @@map("users")
+}
+
+model Session {
+  id                String    @id @default(uuid(7)) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  tokenHash         Bytes     @unique(map: "sessions_token_hash_uq") @map("token_hash")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt        DateTime  @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  idleExpiresAt     DateTime  @map("idle_expires_at") @db.Timestamptz(3)
+  absoluteExpiresAt DateTime  @map("absolute_expires_at") @db.Timestamptz(3)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokeReason      String?   @map("revoke_reason") @db.VarChar(32)
+  ip                String?   @db.Inet
+  userAgent         String?   @map("user_agent") @db.VarChar(200)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, map: "sessions_user_fk")
+
+  @@index([userId], map: "sessions_user_idx")
+  @@map("sessions")
+}

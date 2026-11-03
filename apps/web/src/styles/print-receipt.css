@@ -1,0 +1,236 @@
+/*
+ * 80 mm thermal receipt (D-13, SYSTEM_DESIGN.md §3.5): 72 mm printable width, no page margins.
+ * On screen the print copy is hidden; when printing, only the receipt is shown.
+ */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+.receipt {
+  width: 72mm;
+  max-width: 100%;
+  margin: 0 auto;
+  font-family: 'Poppins', 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.32;
+  color: #111;
+}
+
+.receipt hr {
+  border: 0;
+  border-top: 1px dashed #333;
+  margin: 8px 0;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-header-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 11px;
+}
+
+.receipt-header-meta span:first-child {
+  white-space: nowrap;
+}
+
+.receipt-header-meta span:last-child {
+  text-align: right;
+  max-width: 55%;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.receipt-logo {
+  width: 62px;
+  height: 62px;
+  margin: 8px auto;
+  border: 2px solid #111;
+  border-radius: 9999px;
+  object-fit: contain;
+}
+
+.receipt-logo-fallback {
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.receipt-shop {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.2px;
+}
+
+.receipt-address {
+  margin-top: 3px;
+}
+
+.receipt-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.receipt-row span:first-child {
+  flex: 0 0 34%;
+}
+
+.receipt-row span:last-child {
+  flex: 1;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.receipt-table th,
+.receipt-table td {
+  padding: 5px 3px;
+  border-bottom: 1px dotted #777;
+  vertical-align: top;
+}
+
+.receipt-table thead th {
+  font-size: 12px;
+  font-weight: 800;
+  border-bottom: 1px solid #222;
+}
+
+.receipt-table th:first-child,
+.receipt-table td:first-child {
+  width: 49%;
+  text-align: left;
+}
+
+.receipt-table th:nth-child(2),
+.receipt-table td:nth-child(2) {
+  width: 12%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.receipt-table th:nth-child(3),
+.receipt-table td:nth-child(3),
+.receipt-table th:nth-child(4),
+.receipt-table td:nth-child(4) {
+  width: 19.5%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.receipt-grand-total {
+  border-top: 2px solid #111;
+  margin-top: 6px;
+  padding-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.receipt-barcode {
+  margin: 12px 0 6px;
+  height: 54px;
+  background: repeating-linear-gradient(
+    90deg,
+    #000 0,
+    #000 1px,
+    transparent 1px,
+    transparent 2px,
+    #000 2px,
+    #000 3px,
+    transparent 3px,
+    transparent 5px
+  );
+}
+
+.receipt-barcode-text {
+  text-align: center;
+  letter-spacing: 3px;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+
+.receipt-footer {
+  text-align: center;
+  font-weight: 800;
+  font-size: 13px;
+  margin: 10px 0;
+}
+
+.receipt-policy {
+  border: 1px dashed #333;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.receipt-policy h3 {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.receipt-policy p {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* AI business reports (F-29) print on A4 through their own named page. */
+@page report {
+  size: A4;
+  margin: 15mm;
+}
+
+.report-print {
+  page: report;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #000;
+}
+
+.report-print h1 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+@media screen {
+  .receipt-print,
+  .report-print {
+    display: none;
+  }
+}
+
+@media print {
+  body > *:not(.receipt-print, .report-print) {
+    display: none !important;
+  }
+
+  .receipt-print,
+  .report-print {
+    display: block;
+    background: #fff;
+  }
+
+  .receipt-print {
+    padding: 0 4mm;
+  }
+}

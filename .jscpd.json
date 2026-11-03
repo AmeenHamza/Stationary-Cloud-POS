@@ -1,0 +1,24 @@
+{
+  "threshold": 0,
+  "minLines": 8,
+  "minTokens": 70,
+  "format": ["typescript", "tsx", "javascript", "graphql", "css"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "**/.next-e2e/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/.turbo/**",
+    "**/coverage/**",
+    "**/__generated__/**",
+    "**/generated/**",
+    "**/migrations/**",
+    "packages/contracts/schema.graphql",
+    "Screen Shots/**"
+  ],
+  "gitignore": true,
+  "reporters": ["console"],
+  "absolute": false
+}

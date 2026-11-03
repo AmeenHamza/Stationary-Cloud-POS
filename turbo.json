@@ -1,0 +1,37 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "codegen"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build", "codegen"]
+    },
+    "lint": {
+      "dependsOn": ["^build", "codegen"]
+    },
+    "test": {
+      "dependsOn": ["^build", "codegen"],
+      "outputs": []
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "codegen": {
+      "inputs": ["$TURBO_DEFAULT$", "../../packages/contracts/schema.graphql"],
+      "outputs": ["src/graphql/__generated__/**", "src/generated/**"]
+    },
+    "schema:emit": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "dev": {
+      "dependsOn": ["^build", "codegen"],
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

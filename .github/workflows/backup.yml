@@ -1,0 +1,68 @@
+name: Weekly backup
+# DEPLOYMENT.md §7: a logical dump of production, encrypted with age for the owner's offline key,
+# uploaded to Cloudflare R2, read back and checked, keeping the newest 12. Restore steps:
+# docs/runbooks/restore.md. Needs the `production` environment secrets listed in DEPLOYMENT.md §4.3.
+on:
+  schedule:
+    - cron: '0 22 * * 6' # Sunday 03:00 Asia/Karachi
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      KEEP: 12
+    steps:
+      - name: Install the PostgreSQL 17 client and age
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -q postgresql-client-17 age
+
+      - name: Dump and encrypt (the plaintext dump never touches the disk)
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          file="$(date -u +%Y-%m-%d).dump.age"
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-privileges \
+            "$BACKUP_DATABASE_URL" | age --recipient "$BACKUP_AGE_RECIPIENT" --output "$file"
+          test -s "$file"
+          echo "FILE=$file" >> "$GITHUB_ENV"
+          echo "Encrypted dump: $(du -h "$file" | cut -f1)"
+
+      - name: Upload to R2 and verify the stored copy
+        run: |
+          set -euo pipefail
+          key="backups/weekly/$FILE"
+          aws s3 cp "$FILE" "s3://$R2_BUCKET/$key" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          aws s3 cp "s3://$R2_BUCKET/$key" check.age --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          test "$(sha256sum < "$FILE")" = "$(sha256sum < check.age)"
+          echo "Stored and verified: $key"
+
+      - name: Keep the newest ${{ env.KEEP }}
+        run: |
+          set -euo pipefail
+          aws s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix backups/weekly/ \
+              --endpoint-url "$R2_ENDPOINT" --query 'Contents[].Key' --output text \
+            | tr '\t' '\n' | grep '\.dump\.age$' | sort | head -n "-$KEEP" \
+            | while read -r old; do
+                aws s3 rm "s3://$R2_BUCKET/$old" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+                echo "Removed $old"
+              done

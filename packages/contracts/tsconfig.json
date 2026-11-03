@@ -1,0 +1,7 @@
+{
+  "extends": "@pos/config-typescript/library.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts"]
+}

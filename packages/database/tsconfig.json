@@ -1,0 +1,15 @@
+{
+  "extends": "@pos/config-typescript/node.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "seed/**/*.ts",
+    "test/**/*.ts",
+    "*.config.ts",
+    "prisma.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

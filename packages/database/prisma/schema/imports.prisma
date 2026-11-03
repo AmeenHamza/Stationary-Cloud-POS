@@ -1,0 +1,67 @@
+// Product import staging (DATABASE.md §4.15, ADR-020): the upload is parsed and stored here before
+// it is queued, so PostgreSQL holds the job's state and every row is applied exactly once.
+
+enum ImportKind {
+  PRODUCTS
+
+  @@map("import_kind")
+}
+
+enum ImportStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+
+  @@map("import_status")
+}
+
+enum ImportRowStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+
+  @@map("import_row_status")
+}
+
+model ImportJob {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  kind          ImportKind
+  status        ImportStatus @default(QUEUED)
+  fileName      String       @map("file_name") @db.VarChar(200)
+  totalRows     Int          @map("total_rows")
+  processedRows Int          @default(0) @map("processed_rows")
+  succeededRows Int          @default(0) @map("succeeded_rows")
+  failedRows    Int          @default(0) @map("failed_rows")
+  createdById   String       @map("created_by_id") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  startedAt     DateTime?    @map("started_at") @db.Timestamptz(3)
+  finishedAt    DateTime?    @map("finished_at") @db.Timestamptz(3)
+  errorSummary  String?      @map("error_summary") @db.VarChar(300)
+
+  createdBy User            @relation(fields: [createdById], references: [id], onDelete: Restrict, map: "import_jobs_created_by_fk")
+  rows      ImportJobRow[]
+  movements StockMovement[]
+
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "import_jobs_created_idx")
+  @@index([status], map: "import_jobs_status_idx")
+  @@map("import_jobs")
+}
+
+model ImportJobRow {
+  id        BigInt          @id @default(autoincrement())
+  jobId     String          @map("job_id") @db.Uuid
+  rowNumber Int             @map("row_number")
+  data      Json
+  status    ImportRowStatus @default(PENDING)
+  error     String?         @db.VarChar(300)
+  productId String?         @map("product_id") @db.Uuid
+
+  job     ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade, map: "import_job_rows_job_fk")
+  product Product?  @relation(fields: [productId], references: [id], onDelete: Restrict, map: "import_job_rows_product_fk")
+
+  @@unique([jobId, rowNumber], map: "import_job_rows_job_row_uq")
+  @@index([jobId, status, rowNumber], map: "import_job_rows_job_status_idx")
+  @@map("import_job_rows")
+}

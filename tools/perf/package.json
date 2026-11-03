@@ -1,0 +1,29 @@
+{
+  "name": "@pos/perf",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "perf": "tsx src/run.ts"
+  },
+  "devDependencies": {
+    "@graphql-typed-document-node/core": "3.2.0",
+    "@node-rs/argon2": "2.2.2",
+    "@pos/config-typescript": "workspace:*",
+    "@pos/domain": "workspace:*",
+    "@pos/testkit": "workspace:*",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
+    "graphql": "16.14.2",
+    "ioredis": "6.0.0",
+    "pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5",
+    "ws": "8.22.0"
+  }
+}

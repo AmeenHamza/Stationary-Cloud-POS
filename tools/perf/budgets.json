@@ -1,0 +1,25 @@
+{
+  "$comment": "NETWORK_OPTIMIZATION.md §4.1–§4.3. A run fails when a value exceeds its budget by more than tolerance (§8.3); the monthly ceiling has no tolerance. Response sizes are uncompressed JSON; LowStockProducts uses the admin product-rows budget.",
+  "tolerance": 0.1,
+  "budgets": {
+    "dbBytesScanBill3Lines": 25600,
+    "dbBytesSearchBill3Lines": 81920,
+    "dbBytesPerBillAmortized": 153600,
+    "dbBytesIdleHour": 10240,
+    "dbBytesMonthTarget": 314572800,
+    "wsLargestEventBytes": 1024,
+    "wsIdleBytesPerMinutePerChannel": 1024,
+    "wsEventsPerBillPerChannel": 3,
+    "responseProductByBarcode": 1536,
+    "responseTerminalProducts": 15360,
+    "responseCreateSale": 6144,
+    "responseOrders": 20480,
+    "responseCustomerLedger": 15360,
+    "responseDashboardLive": 3072,
+    "responseDashboardHistory": 8192,
+    "responseLowStockProducts": 25600
+  },
+  "ceilings": {
+    "dbBytesMonth": 1073741824
+  }
+}

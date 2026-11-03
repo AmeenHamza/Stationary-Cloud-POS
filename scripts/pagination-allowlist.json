@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "field": "Query.productsByIds",
+      "bound": 50,
+      "reason": "ids capped at MAX_IDS_PER_LOOKUP by productIdsSchema; cart and visible-row reconciliation (API.md §3)"
+    },
+    {
+      "field": "StockChangedEvent.items",
+      "bound": 100,
+      "reason": "one transaction's lines, at most MAX_LINES_PER_SALE; events stay within 1 KB (API.md §7.2)"
+    },
+    {
+      "field": "OrderDetail.lines",
+      "bound": 100,
+      "reason": "one bill's lines, at most MAX_LINES_PER_SALE by createSaleInputSchema and the order_lines line_no CHECK (Q34)"
+    },
+    {
+      "field": "Receipt.lines",
+      "bound": 100,
+      "reason": "the printed lines of one bill, at most MAX_LINES_PER_SALE (Q34, SYSTEM_DESIGN.md §3.5)"
+    },
+    {
+      "field": "CreateSalePayload.stockWarnings",
+      "bound": 100,
+      "reason": "at most one per product of the sale, so at most MAX_LINES_PER_SALE (D-16)"
+    },
+    {
+      "field": "Dashboard.monthlySales",
+      "bound": 12,
+      "reason": "calendar months of one year (API.md §3)"
+    },
+    {
+      "field": "Dashboard.dailySales",
+      "bound": 31,
+      "reason": "days argument capped at DASHBOARD_MAX_DAYS by dailySalesArgsSchema (API.md §3)"
+    },
+    {
+      "field": "Dashboard.paymentMethods",
+      "bound": 6,
+      "reason": "one row per PaymentMethod enum value (API.md §3)"
+    },
+    {
+      "field": "Dashboard.productRanking",
+      "bound": 10,
+      "reason": "limit capped at RANKING_MAX_LIMIT by productRankingArgsSchema (API.md §3)"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "pin",
+  "schedule": ["before 6am on monday"],
+  "timezone": "Asia/Karachi",
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Majors need a manual compatibility review (DECISIONS.md §1) and a polling re-audit (SYSTEM_DESIGN.md §5.6).",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "groupName": "nestjs",
+      "matchPackageNames": ["@nestjs/**"]
+    },
+    {
+      "groupName": "prisma",
+      "matchPackageNames": ["prisma", "@prisma/**"]
+    }
+  ]
+}

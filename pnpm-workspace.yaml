@@ -1,0 +1,26 @@
+packages:
+  - apps/*
+  - packages/*
+  - tools/*
+  - e2e
+  - scripts
+
+engineStrict: true
+
+# Lifecycle scripts are blocked unless explicitly allowed (supply-chain hardening).
+allowBuilds:
+  '@swc/core': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  unrs-resolver: true
+  '@apollo/protobufjs': false
+  # Optional native speed-up for BullMQ's msgpackr; its pure-JS fallback is used instead.
+  msgpackr-extract: false
+
+# pnpm's minimum-release-age gate: these exact versions are the ones compatible with NestJS 12
+# (DECISIONS.md §1); they were reviewed and pinned at Phase 4.
+minimumReleaseAgeExclude:
+  - '@nestjs-cls/transactional-adapter-prisma@2.0.2'
+  - '@nestjs-cls/transactional@4.0.2'
+  - nestjs-cls@7.0.2

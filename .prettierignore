@@ -1,0 +1,16 @@
+node_modules
+dist
+.next
+.next-e2e
+playwright-report
+test-results
+.turbo
+coverage
+pnpm-lock.yaml
+**/__generated__
+packages/database/src/generated
+packages/database/prisma/migrations
+packages/contracts/schema.graphql
+Screen Shots
+*.md
+next-env.d.ts

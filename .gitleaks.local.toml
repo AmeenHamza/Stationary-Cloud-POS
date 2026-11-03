@@ -1,0 +1,16 @@
+# Local working-tree scan (`pnpm check:secrets`). `gitleaks dir` does not honour .gitignore, so
+# git-ignored local artefacts are skipped here: the local .env files (local-only service passwords) and
+# Next.js build output (per-build preview-mode keys Next generates). None of these is ever committed;
+# CI scans git history with the strict .gitleaks.toml, so a committed .env or build file is still caught.
+title = "stationery-pos local working-tree scan"
+
+[extend]
+path = ".gitleaks.toml"
+
+[allowlist]
+description = "Git-ignored local env files and Next.js build output"
+paths = [
+  '''(^|[\/])\.env$''',
+  '''(^|[\/])\.env\.local$''',
+  '''(^|[\/])\.next(-e2e)?[\/]''',
+]

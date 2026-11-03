@@ -1,0 +1,21 @@
+{
+  "name": "@pos/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@node-rs/argon2": "2.2.2",
+    "@playwright/test": "1.64.1",
+    "@pos/config-typescript": "workspace:*",
+    "@pos/testkit": "workspace:*",
+    "@types/node": "24.19.2",
+    "ioredis": "6.0.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3"
+  }
+}

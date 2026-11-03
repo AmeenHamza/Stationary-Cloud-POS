@@ -1,0 +1,5 @@
+# Line counting (CODING_STANDARDS.md §2) is LF-based: force LF everywhere.
+* text=auto eol=lf
+*.webp binary
+*.png binary
+*.ico binary

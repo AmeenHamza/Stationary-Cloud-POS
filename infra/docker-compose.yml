@@ -1,0 +1,39 @@
+# Local PostgreSQL + Redis for development (DEPLOYMENT.md §2). Ports bind to localhost only.
+# Machines without Docker use `pnpm services:up`, which falls back to the WSL services.
+name: stationery-pos
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-pos_dev}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      retries: 20
+  redis:
+    image: redis:8-alpine
+    command:
+      [
+        'redis-server',
+        '/usr/local/etc/redis/redis.conf',
+        '--requirepass',
+        '${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}',
+      ]
+    ports:
+      - '127.0.0.1:6379:6379'
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$${REDIS_PASSWORD}" --no-auth-warning ping | grep PONG']
+      interval: 5s
+      retries: 20
+volumes:
+  pg-data:
+  redis-data:

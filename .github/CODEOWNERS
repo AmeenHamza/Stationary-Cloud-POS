@@ -1,0 +1,9 @@
+# Replace OWNER_HANDLE with the repository owner's GitHub username, then uncomment.
+# Owner approval is required for quality gates, infrastructure and schema history
+# (CODING_STANDARDS.md §2, §7; DATABASE.md §9).
+# /scripts/                         OWNER_HANDLE
+# /infra/                           OWNER_HANDLE
+# /.github/                         OWNER_HANDLE
+# /scripts/file-size.config.json    OWNER_HANDLE
+# /scripts/pagination-allowlist.json OWNER_HANDLE
+# /packages/database/prisma/migrations/ OWNER_HANDLE

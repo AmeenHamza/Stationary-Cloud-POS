@@ -1,0 +1,69 @@
+name: Network budgets
+# NETWORK_OPTIMIZATION.md §8: the full-day workload (NET-06) and the browser network specs (NET-04,
+# NET-05), nightly and on demand. Reports are uploaded as artifacts; a failed budget fails the run.
+on:
+  schedule:
+    - cron: '30 21 * * *' # 02:30 Asia/Karachi
+  workflow_dispatch:
+
+concurrency:
+  group: network-budgets
+  cancel-in-progress: false
+
+env:
+  TEST_DATABASE_URL: postgresql://pos:ci-only-password@localhost:5432/pos_ci
+  TEST_REDIS_URL: redis://localhost:6379
+
+jobs:
+  workload:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: pos_ci
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U pos" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm --filter @pos/perf perf
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-report
+          path: tools/perf/perf-report/
+
+  browser:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: pos_ci
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U pos" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:8-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm --filter @pos/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @pos/e2e exec playwright test tests/network.spec.ts
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-spec
+          path: e2e/test-results/

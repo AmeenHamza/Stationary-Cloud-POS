@@ -1,0 +1,53 @@
+// Shop settings, transactional outbox and audit log (DATABASE.md §4.3, §4.13, §4.14).
+
+model ShopSettings {
+  id                   Int      @id @default(1) @db.SmallInt
+  shopName             String   @map("shop_name") @db.VarChar(120)
+  address              String?  @db.VarChar(300)
+  phone                String?  @db.VarChar(30)
+  receiptFooter        String?  @map("receipt_footer") @db.VarChar(300)
+  exchangeReturnPolicy String?  @map("exchange_return_policy") @db.Text
+  logoDataUrl          String?  @map("logo_data_url") @db.Text
+  defaultBillGstRate   Decimal  @default(18.00) @map("default_bill_gst_rate") @db.Decimal(5, 2)
+  groqApiKeyCiphertext Bytes?   @map("groq_api_key_ciphertext")
+  groqApiKeyLast4      String?  @map("groq_api_key_last4") @db.VarChar(4)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedById          String?  @map("updated_by_id") @db.Uuid
+  version              Int      @default(1)
+
+  updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: Restrict, map: "shop_settings_updated_by_fk")
+
+  @@map("shop_settings")
+}
+
+model OutboxEvent {
+  seq           BigInt    @id @default(autoincrement())
+  type          String    @db.VarChar(48)
+  audience      String    @db.VarChar(64)
+  schemaVersion Int       @map("schema_version") @db.SmallInt
+  payload       Json
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  publishedAt   DateTime? @map("published_at") @db.Timestamptz(3)
+
+  @@index([createdAt], map: "outbox_created_idx")
+  @@map("outbox_events")
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String   @db.VarChar(64)
+  entityType  String?  @map("entity_type") @db.VarChar(32)
+  entityId    String?  @map("entity_id") @db.VarChar(64)
+  metadata    Json?
+  ip          String?  @db.Inet
+  requestId   String?  @map("request_id") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: Restrict, map: "audit_logs_actor_fk")
+
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "audit_logs_created_idx")
+  @@index([entityType, entityId, createdAt(sort: Desc)], map: "audit_logs_entity_idx")
+  @@index([actorUserId, createdAt(sort: Desc)], map: "audit_logs_actor_idx")
+  @@map("audit_logs")
+}

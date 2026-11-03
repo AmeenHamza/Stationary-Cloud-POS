@@ -1,0 +1,54 @@
+{
+  "name": "@pos/database",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "prisma",
+    "prisma.config.ts"
+  ],
+  "scripts": {
+    "generate": "prisma generate",
+    "build": "prisma generate && tsup",
+    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint .",
+    "migrate:dev": "tsx scripts/guard-local.ts && prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test": "prisma generate && vitest run",
+    "seed:dev": "tsx scripts/guard-local.ts && tsx seed/seed-dev.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "prisma": "7.10.1"
+  },
+  "devDependencies": {
+    "@pos/config-typescript": "workspace:*",
+    "@pos/contracts": "workspace:*",
+    "@pos/testkit": "workspace:*",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "tsup": "9.0.0",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5",
+    "@pos/domain": "workspace:*"
+  }
+}

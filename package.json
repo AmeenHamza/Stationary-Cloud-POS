@@ -1,0 +1,45 @@
+{
+  "name": "stationery-pos",
+  "private": true,
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration --concurrency=1",
+    "test:e2e": "pnpm --filter @pos/e2e test:e2e",
+    "codegen": "turbo run codegen",
+    "schema:emit": "turbo run schema:emit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:file-size": "pnpm --filter @pos/scripts exec tsx check-file-size.ts",
+    "check:duplication": "jscpd --config .jscpd.json .",
+    "check:deps": "pnpm --filter @pos/scripts exec tsx check-deps.ts",
+    "check:no-polling": "pnpm --filter @pos/scripts exec tsx check-no-polling.ts",
+    "check:pagination": "pnpm --filter @pos/scripts exec tsx check-graphql-pagination.ts && pnpm --filter @pos/scripts exec tsx check-prisma-take.ts",
+    "check:schema": "pnpm --filter @pos/scripts exec tsx check-schema-drift.ts",
+    "check:secrets": "gitleaks dir --no-banner --redact --config .gitleaks.local.toml .",
+    "audit:deps": "pnpm audit --audit-level high",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:file-size && pnpm check:duplication && pnpm check:deps && pnpm check:no-polling && pnpm check:pagination && pnpm test && pnpm build && pnpm check:schema",
+    "services:up": "pnpm --filter @pos/scripts exec tsx dev/services-up.ts",
+    "db:migrate": "pnpm --filter @pos/database migrate:dev",
+    "db:seed": "pnpm --filter @pos/database seed:dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@pos/config-eslint": "workspace:*",
+    "dependency-cruiser": "18.7.0",
+    "eslint": "10.13.0",
+    "jscpd": "5.4.2",
+    "prettier": "3.9.10",
+    "turbo": "2.11.10",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

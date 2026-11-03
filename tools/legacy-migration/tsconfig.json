@@ -1,0 +1,7 @@
+{
+  "extends": "@pos/config-typescript/node.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "vitest.integration.config.ts"]
+}
