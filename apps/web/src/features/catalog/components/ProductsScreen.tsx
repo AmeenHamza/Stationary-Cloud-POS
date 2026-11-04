@@ -4,12 +4,12 @@ import { useQuery } from '@apollo/client/react';
 import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import { formatRs } from '@pos/domain';
+
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RevealKpiCard } from '@/components/metrics/RevealKpiCard';
 import { Button } from '@/components/ui/button';
 import { useCursorPages } from '@/hooks/useCursorPages';
-
-import { formatRs } from '@pos/domain';
 
 import { ProductInventoryKpisDocument, ProductsDocument } from '../graphql/products.documents';
 import { useProductActions } from '../hooks/useProductActions';

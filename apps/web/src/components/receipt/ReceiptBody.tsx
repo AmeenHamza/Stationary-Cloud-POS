@@ -96,10 +96,10 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
         <tbody>
           {receipt.lines.map((line, index) => (
             <tr key={index}>
-              <td>{line.name}</td>
-              <td>{line.quantity}</td>
-              <td>{formatRs(line.unitPrice)}</td>
-              <td>{formatRs(line.lineTotal)}</td>
+              <td className="receipt-item-name">{line.name}</td>
+              <td className="receipt-item-qty">{line.quantity}</td>
+              <td className="receipt-item-price">{formatRs(line.unitPrice)}</td>
+              <td className="receipt-item-total">{formatRs(line.lineTotal)}</td>
             </tr>
           ))}
         </tbody>

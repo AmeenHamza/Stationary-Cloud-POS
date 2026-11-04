@@ -15,6 +15,7 @@
   font-size: 12px;
   line-height: 1.32;
   color: #000;
+  font-weight: 600;
 }
 
 .receipt * {
@@ -104,37 +105,77 @@
 
 .receipt-table th,
 .receipt-table td {
-  padding: 5px 3px;
-  border-bottom: 1px dotted #777;
+  padding: 4px 1px;
   vertical-align: top;
+  font-size: 9px;
+}
+
+.receipt-table td {
+  font-weight: 700;
+  border-bottom: 0;
+}
+
+.receipt-table tbody tr {
+  border-bottom: 1px dotted #777;
 }
 
 .receipt-table thead th {
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 800;
   border-bottom: 1px solid #222;
 }
 
 .receipt-table th:first-child,
 .receipt-table td:first-child {
-  width: 49%;
+  width: 50%;
   text-align: left;
 }
 
 .receipt-table th:nth-child(2),
 .receipt-table td:nth-child(2) {
-  width: 12%;
-  text-align: center;
+  width: 10%;
+  text-align: left;
   white-space: nowrap;
+  padding-left: 0;
 }
 
 .receipt-table th:nth-child(3),
-.receipt-table td:nth-child(3),
+.receipt-table td:nth-child(3) {
+  width: 20%;
+  text-align: right;
+}
+
 .receipt-table th:nth-child(4),
 .receipt-table td:nth-child(4) {
-  width: 19.5%;
+  width: 25%;
   text-align: right;
+}
+
+.receipt-item-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  padding-right: 4px;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.receipt-item-qty {
   white-space: nowrap;
+}
+
+.receipt-item-price,
+.receipt-item-total {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.2;
 }
 
 .receipt-grand-total {
