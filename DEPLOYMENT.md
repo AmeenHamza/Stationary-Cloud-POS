@@ -12,8 +12,8 @@ DECISIONS.md ADR-022; open items are U-01–U-07.
 |---|---|---|---|---|
 | Local | `pnpm dev` (port 3000) | `pnpm dev` (port 4000) + Redis 8 (6379; Docker or WSL) | PostgreSQL 17 (5432; Docker or WSL) | Development |
 | CI | Production build | Built API in-process | Service containers (PostgreSQL 17, Redis 8) | Tests |
-| Staging | Vercel preview/staging domain `pos-staging.<domain>` | Railway environment `staging` | Neon branch `staging` | Rehearsal, smoke tests, owner training |
-| Production | Vercel `pos.<domain>` | Railway environment `production` | Neon `main` branch | The shop |
+| Staging | Vercel preview/staging domain `pos-staging.<domain>` | Render API `staging` + Railway Redis | Neon branch `staging` | Rehearsal, smoke tests, owner training |
+| Production | Vercel `pos.<domain>` | Render API `production` + Railway Redis | Neon `main` branch | The shop |
 
 Web and API must share a registrable domain (`pos.<domain>`, `api.<domain>`), so the session cookie is
 same-site (ADR-011, U-03). The default `*.vercel.app` and `*.up.railway.app` hosts are **not** sufficient for
@@ -53,7 +53,7 @@ and named volumes. Ports bind to `127.0.0.1` only.
 | Platform | Service | Configuration |
 |---|---|---|
 | Vercel | `apps/web` | Root `apps/web`; build `pnpm turbo run build --filter=@pos/web`; Node LTS; security headers from `next.config.ts` |
-| Railway | `api` | Dockerfile `apps/api/Dockerfile` (build context = repository root; `turbo prune` → install → build → production install, ADR-032); config-as-code path `apps/api/railway.json`: pre-deploy `pnpm --filter @pos/database migrate:deploy` (needs `DIRECT_DATABASE_URL`), healthcheck `/health/ready`, draining 45 s, restart on failure (5 retries); custom domain `api.<domain>`; region = Neon region (ADR-022) |
+| Render | `api` | Dockerfile `apps/api/Dockerfile` (build context = repository root; `turbo prune` → install → build → production install, ADR-032); pre-deploy `pnpm --filter @pos/database migrate:deploy` (needs `DIRECT_DATABASE_URL`), healthcheck `/health/ready`, restart on failure; custom domain `api.<domain>`; region = Neon region (ADR-022) |
 | Railway | `redis` | Image `redis:8.x-alpine` (pinned), volume `/data`, config §5, private networking only (no public domain or TCP proxy) |
 | Neon | project `stationery-pos` | Branches `main` (production), `staging`, `pre-migrate-*` snapshots; pooled + direct connection strings |
 | GitHub | Actions, environments `staging`, `production` | Production requires manual approval |
@@ -106,6 +106,7 @@ environment secrets, never in the repository.
 | `POSTGRES_PASSWORD`, `REDIS_PASSWORD` | local docker compose (root `.env`) | local only |
 | `LEGACY_DATABASE_URL` | `tools/legacy-migration`, **owner's machine only** (read-only role) | yes |
 | `BACKUP_DATABASE_URL`, `BACKUP_AGE_RECIPIENT`, `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `backup.yml` | yes |
+| `RENDER_DEPLOY_HOOK_URL` | `.github/workflows/deploy-render.yml` | yes |
 | `RAILWAY_TOKEN`, `VERCEL_TOKEN` | deploy workflows (if deploys are triggered from CI) | yes |
 
 ---
@@ -154,23 +155,26 @@ not the new app's database.
 Order is always **database → API → web**, so older web builds keep working against a newer API (additive
 GraphQL changes, expand/contract migrations).
 
-1. Merge to `main` (all CI gates green).
-2. **Staging:** deploy the API to Railway `staging` (pre-deploy runs `migrate deploy` against the Neon `staging`
+1. Merge to `main` (all CI gates green). The `CI` workflow then triggers
+   `.github/workflows/deploy-render.yml`, which calls Render's deploy hook only after the workflow succeeds.
+2. **API deployment:** Render builds the public repository's `main` commit, runs the configured migration and
+   health-check commands, and routes traffic only after the service is ready.
+3. **Staging:** deploy the API to Render `staging` (pre-deploy runs `migrate deploy` against the Neon `staging`
    branch), wait for `/health/ready`, deploy the web preview, run STG-01–STG-04.
-3. **Production** (GitHub environment approval):
+4. **Production** (GitHub environment approval):
    1. Create a Neon branch `pre-migrate-<YYYYMMDD-HHMM>` from `main` (instant snapshot).
-   2. Deploy the API: the pre-deploy migration runs; Railway starts the new instance, waits for health, routes
-      traffic, then drains the old one for 45 s (sockets get `1012` and reconnect).
+   2. Deploy the API: the pre-deploy migration runs; Render starts the new instance, waits for health, routes
+      traffic, then drains the old one (sockets reconnect).
    3. Deploy the web app to Vercel production.
    4. Watch Sentry, error rate and `createSale` latency for 30 minutes.
-4. Deploy outside shop hours when a migration is non-trivial.
+5. Deploy outside shop hours when a migration is non-trivial.
 
 **Rollback:**
 
 | What failed | Action |
 |---|---|
 | Web | Vercel "Instant rollback" to the previous deployment |
-| API (no schema change, or additive only) | Railway redeploy of the previous image |
+| API (no schema change, or additive only) | Render redeploy of the previous image |
 | Migration broke data | Stop the API; restore from the `pre-migrate-*` branch (Neon restore or switch URLs); redeploy the previous image |
 | Contract migration already ran | Forward fix only (that is why contract steps ship a release after expand) |
 

@@ -13,25 +13,28 @@ the staging checks before creating production.
 
 ## 2. Neon (U-04)
 
-1. Project `stationery-pos`, PostgreSQL 17, in the region Railway will use (ADR-022).
+1. Project `stationery-pos`, PostgreSQL 17, in the region Render will use (ADR-022).
 2. Production: autosuspend **off**, point-in-time restore ≥ 7 days. Branch `staging` from `main`.
 3. Roles: the app role (owns the schema), and a read-only backup role:
    `CREATE ROLE pos_backup LOGIN PASSWORD '<generated>'; GRANT pg_read_all_data TO pos_backup;`
 4. Note the **pooled** URL (`DATABASE_URL`) and the **direct** URL (`DIRECT_DATABASE_URL`), both with
    `sslmode=require`.
 
-## 3. Railway (U-01)
+## 3. Render (U-01)
 
-1. Project with environments `staging` and `production`.
+1. Create the API service from the public repository, with environments `staging` and `production`.
 2. Service `redis`: the pinned `redis:8.x-alpine` image, a volume on `/data`, `infra/redis/redis.conf`
    with a generated password and the `pos-api` ACL user (DEPLOYMENT.md §5). Private networking only.
-3. Service `api`: this repository, config-as-code `apps/api/railway.json` (Dockerfile build, migrations
-   before each deploy, health check `/health/ready`, 45 s draining). Custom domain `api.<domain>`.
+3. Service `api`: this repository, Dockerfile `apps/api/Dockerfile`, migrations before each deploy, health
+   check `/health/ready`, and custom domain `api.<domain>`.
 4. Variables (DEPLOYMENT.md §4.1): `NODE_ENV=production`, `DATABASE_URL`, `DIRECT_DATABASE_URL`,
    `REDIS_URL`, `WEB_ORIGIN=https://pos.<domain>`, `SETTINGS_ENCRYPTION_KEY` (generated, see
    [rotate-secrets.md](rotate-secrets.md)), `METRICS_TOKEN` (generated), `TRUST_PROXY_HOPS=1`,
    `LOG_LEVEL=info`. Leave `GROQ_BASE_URL` unset; `GROQ_MODEL` only to override `openai/gpt-oss-120b`.
 5. Deploy. The first deploy creates every table. Check `https://api.<domain>/health/ready`.
+6. In Render, create a production deploy hook for the API service. In the GitHub repository settings, add it
+   as the `RENDER_DEPLOY_HOOK_URL` repository secret. The `CI` workflow will then
+   trigger `.github/workflows/deploy-render.yml` after successful checks on `main`.
 
 ## 4. Vercel (U-02)
 
@@ -41,8 +44,9 @@ the staging checks before creating production.
 
 ## 5. First account and shop settings
 
-1. Create the owner's admin account (the password is asked for, never typed on the command line):
-   `railway run --service api --environment production pnpm --filter @pos/api cli:create-admin --username <name> --full-name "<Full Name>"`
+1. Create the owner's admin account from the Render service shell or a one-off production job (the password
+   is asked for, never typed on the command line):
+   `pnpm --filter @pos/api cli:create-admin --username <name> --full-name "<Full Name>"`
    (from a machine with the repository built, `pnpm build`).
 2. Sign in at `https://pos.<domain>`, then in Settings: shop name, address, phone, receipt footer, GST rate,
    and the Groq API key (AI Assistant).
@@ -50,7 +54,8 @@ the staging checks before creating production.
 
 ## 6. Operations (U-06, U-07)
 
-1. GitHub environment `production` (manual approval) with the backup secrets from DEPLOYMENT.md §4.3. Run
+1. GitHub environment `production` (manual approval) with the backup secrets from DEPLOYMENT.md §4.3. The
+   deploy-hook secret is a repository secret so the API deployment remains automatic. Run
    `Weekly backup` by hand once and check the file in R2.
 2. Do the restore drill in [restore.md](restore.md) and record it there.
 3. Uptime monitor on `https://api.<domain>/health/live` every 5 minutes (no database or Redis cost).
