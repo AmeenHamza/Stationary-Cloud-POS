@@ -107,6 +107,7 @@ environment secrets, never in the repository.
 | `LEGACY_DATABASE_URL` | `tools/legacy-migration`, **owner's machine only** (read-only role) | yes |
 | `BACKUP_DATABASE_URL`, `BACKUP_AGE_RECIPIENT`, `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | `backup.yml` | yes |
 | `RENDER_DEPLOY_HOOK_URL` | `.github/workflows/deploy-render.yml` | yes |
+| `FORK_SYNC_TOKEN` | `.github/workflows/deploy-render.yml`: fine-grained token limited to the fork Vercel builds, with Contents and Workflows write | yes |
 | `RAILWAY_TOKEN`, `VERCEL_TOKEN` | deploy workflows (if deploys are triggered from CI) | yes |
 
 ---
@@ -156,7 +157,10 @@ Order is always **database → API → web**, so older web builds keep working a
 GraphQL changes, expand/contract migrations).
 
 1. Merge to `main` (all CI gates green). The `CI` workflow then triggers
-   `.github/workflows/deploy-render.yml`, which calls Render's deploy hook only after the workflow succeeds.
+   `.github/workflows/deploy-render.yml`, which runs only after CI succeeds. It calls Render's deploy hook, then
+   copies the tested commit to the fork's `main`, which Vercel builds (ADR-044). The fork is a mirror, so commits
+   made only there are replaced. The workflow does not wait for Render to finish, so the web app can go live a
+   few minutes before the API.
 2. **API deployment:** Render builds the public repository's `main` commit, runs the configured migration and
    health-check commands, and routes traffic only after the service is ready.
 3. **Staging:** deploy the API to Render `staging` (pre-deploy runs `migrate deploy` against the Neon `staging`

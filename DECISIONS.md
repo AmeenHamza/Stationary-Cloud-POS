@@ -549,6 +549,16 @@ The owner replaced D-10's no-sign-up policy with sign-up using one server-side s
 Admin or Cashier. Anyone holding the key can create an Admin; treat it as a privileged secret, rotate it if
 exposed, and keep it out of source control. Existing admin staff management remains available.
 
+### ADR-044 Deploys run from the upstream repository (2026-11-07)
+- **Decision:** `deploy-render.yml` runs on `Ifham-Ansari/Stationary-Cloud-POS`. After CI passes on a push to
+  `main`, it calls the Render deploy hook, then force-pushes the tested commit to `main` on
+  `AmeenHamza/Stationary-Cloud-POS`, which Vercel builds.
+- **Why:** GitHub Actions cannot start on the fork's account while it is locked for billing. Vercel still
+  deploys from pushes to the fork, so the hosting setup can stay as it is.
+- **Consequences:** the fork is a mirror, and commits made only there are replaced. The workflow does not wait
+  for Render, so the web app can go live a few minutes before the API. `FORK_SYNC_TOKEN` must stay limited to
+  the fork.
+
 ## 3. Unresolved decisions (owner input needed; defaults apply until answered)
 
 | ID | Decision | Proposed default | Affects |

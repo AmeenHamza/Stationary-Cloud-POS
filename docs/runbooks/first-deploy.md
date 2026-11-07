@@ -34,7 +34,8 @@ the staging checks before creating production.
 5. Deploy. The first deploy creates every table. Check `https://api.<domain>/health/ready`.
 6. In Render, create a production deploy hook for the API service. In the GitHub repository settings, add it
    as the `RENDER_DEPLOY_HOOK_URL` repository secret. The `CI` workflow will then
-   trigger `.github/workflows/deploy-render.yml` after successful checks on `main`.
+   trigger `.github/workflows/deploy-render.yml` after successful checks on `main`. That workflow also copies
+   the commit to the fork Vercel builds, using the `FORK_SYNC_TOKEN` repository secret (DEPLOYMENT.md §4.3).
 
 ## 4. Vercel (U-02)
 
