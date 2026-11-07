@@ -90,7 +90,7 @@ function planOrder(row: LegacyRow<'orders'>, context: OrderContext): OrderPlan |
   const payments = context.paymentsOf(legacyId);
   checkPayments(method, payments, issues, ref);
   const oldTotal = oldTotalOf(row, payments, issues, ref);
-  if (oldTotal !== null && oldTotal.minus(total).abs().greaterThan('0.01')) {
+  if (oldTotal?.minus(total).abs().greaterThan('0.01') === true) {
     issues.block(
       'total-mismatch',
       ref,

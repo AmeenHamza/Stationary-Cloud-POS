@@ -30,7 +30,10 @@ export function RankedBars({
         const share = Math.max(0, toAmount(bar.value)) / largest;
         const barClass = barClassByKey?.[bar.key] ?? 'bg-chart-accent';
         return (
-          <li key={bar.key} className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] items-center gap-3 text-sm">
+          <li
+            key={bar.key}
+            className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] items-center gap-3 text-sm"
+          >
             <span className="truncate text-muted-foreground">{bar.label}</span>
             <span className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1">
               {share > 0 ? (
@@ -48,7 +51,9 @@ export function RankedBars({
                 {format(bar.value)}
               </span>
               {bar.detail !== undefined && (
-                <span className="col-span-2 text-right text-xs text-muted-foreground">{bar.detail}</span>
+                <span className="col-span-2 text-right text-xs text-muted-foreground">
+                  {bar.detail}
+                </span>
               )}
             </span>
           </li>

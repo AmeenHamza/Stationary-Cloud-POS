@@ -34,10 +34,7 @@ export function VendorsPanel({
   const list = usePartyList();
   const [adding, setAdding] = useState(false);
   const { data, error } = useQuery(VendorsDocument, { variables: list.variables });
-  const { data: kpis } = useQuery(
-    VendorKpisDocument,
-    showKpis ? undefined : skipToken,
-  );
+  const { data: kpis } = useQuery(VendorKpisDocument, showKpis ? undefined : skipToken);
   const [create] = useMutation(CreateVendorDocument, { refetchQueries: ['Vendors'] });
   const connection = data?.vendors;
   return (

@@ -14,14 +14,15 @@ export function ProductRanking({ title, rows }: { title: string; rows: readonly 
       ) : (
         <ol className="grid gap-2 text-sm">
           {rows.map((row, index) => (
-            <li key={row.productId} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1">
+            <li
+              key={row.productId}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1"
+            >
               <span className="min-w-0 truncate">
                 <span className="mr-2 text-muted-foreground tabular-nums">{index + 1}.</span>
                 {row.name}
               </span>
-              <span className="text-right tabular-nums">
-                {row.units} pcs
-              </span>
+              <span className="text-right tabular-nums">{row.units} pcs</span>
               <span className="col-span-2 text-right text-xs text-muted-foreground tabular-nums">
                 {formatRs(row.total)}
               </span>

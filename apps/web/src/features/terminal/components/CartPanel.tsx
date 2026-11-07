@@ -69,7 +69,9 @@ export function CartPanel({ sale }: { sale: SaleFlow }) {
         </Button>
       </div>
       {preview.lines.length === 0 && preview.customLines.length === 0 ? (
-        <p className="py-10 text-center text-muted-foreground">Tap a product or add a custom item</p>
+        <p className="py-10 text-center text-muted-foreground">
+          Tap a product or add a custom item
+        </p>
       ) : (
         <ul className="-mx-1 flex-1 overflow-y-auto px-1">
           {preview.lines.map((entry) => (

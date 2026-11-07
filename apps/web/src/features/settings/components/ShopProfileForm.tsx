@@ -137,7 +137,11 @@ export function ShopProfileForm({ settings }: { settings: ShopSettings }) {
         />
         {logoDataUrl !== '' && (
           <div className="flex items-center gap-3">
-            <img src={logoDataUrl} alt="Receipt logo preview" className="h-12 w-12 rounded border object-contain" />
+            <img
+              src={logoDataUrl}
+              alt="Receipt logo preview"
+              className="h-12 w-12 rounded border object-contain"
+            />
             <Button
               type="button"
               variant="outline"

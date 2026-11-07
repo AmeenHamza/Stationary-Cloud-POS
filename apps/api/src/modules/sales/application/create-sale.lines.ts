@@ -1,8 +1,7 @@
 import { toMoneyString, type BillResult } from '@pos/domain';
 
-import type { CreateSaleInput } from '@pos/validation';
-
 import type { BillLineInput, PricedLine } from './sale-pricing';
+import type { CreateSaleInput } from '@pos/validation';
 
 export interface CustomPricedLine {
   name: string;

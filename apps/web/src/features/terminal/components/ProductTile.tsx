@@ -71,7 +71,8 @@ export function ProductTile({ product }: { product: SaleProduct }) {
             dispatch({ type: 'addMany', productId: product.id, unit: 'BOX', quantity });
           }}
         >
-          <PackageIcon /> Add {quantity} box{quantity === 1 ? '' : 'es'} · {formatRs(product.boxPrice)}
+          <PackageIcon /> Add {quantity} box{quantity === 1 ? '' : 'es'} ·{' '}
+          {formatRs(product.boxPrice)}
         </Button>
       )}
     </div>

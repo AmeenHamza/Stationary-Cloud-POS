@@ -22,7 +22,15 @@ export interface NavItem {
   badge?: ReactNode;
 }
 
-function NavLink({ item, active, compact = false }: { item: NavItem; active: boolean; compact?: boolean }) {
+function NavLink({
+  item,
+  active,
+  compact = false,
+}: {
+  item: NavItem;
+  active: boolean;
+  compact?: boolean;
+}) {
   const Icon = item.icon;
   return (
     <Link
@@ -38,7 +46,10 @@ function NavLink({ item, active, compact = false }: { item: NavItem; active: boo
       )}
     >
       <Icon
-        className={cn('size-4 transition-transform duration-150 group-hover:-translate-y-px', compact && 'size-3.5')}
+        className={cn(
+          'size-4 transition-transform duration-150 group-hover:-translate-y-px',
+          compact && 'size-3.5',
+        )}
         aria-hidden
       />
       <span className="truncate">{item.label}</span>
@@ -47,7 +58,13 @@ function NavLink({ item, active, compact = false }: { item: NavItem; active: boo
   );
 }
 
-function MobileNav({ nav, isActive }: { nav: readonly NavItem[]; isActive: (href: string) => boolean }) {
+function MobileNav({
+  nav,
+  isActive,
+}: {
+  nav: readonly NavItem[];
+  isActive: (href: string) => boolean;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>

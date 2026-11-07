@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+
 import { hasPermission } from '@pos/contracts';
 import { formatBillNumber, money, toMoneyString, type BillResult } from '@pos/domain';
+
 import { AppError } from '../../../common/errors/app-error';
 import { runIdempotent } from '../../../common/idempotency/idempotent-replay';
 import { requestHashBytes } from '../../../common/idempotency/request-hash';
@@ -10,16 +12,18 @@ import { SaleStockService } from '../../catalog';
 import { CustomersService } from '../../khata';
 import { BillCounterRepository } from '../persistence/bill-counter.repository';
 import { OrdersRepository } from '../persistence/orders.repository';
-import { toOrderView } from './order-view';
-import { ReceiptBuilder } from './receipt.builder';
-import { SaleEvents } from './sale-events';
+
 import {
   billLineInputs,
   customLinesOf,
   orderLinesData,
   outOfStockNames,
 } from './create-sale.lines';
+import { toOrderView } from './order-view';
+import { ReceiptBuilder } from './receipt.builder';
+import { SaleEvents } from './sale-events';
 import { billOf, priceLines } from './sale-pricing';
+
 import type { Principal } from '../../../common/auth/principal';
 import type { CreateSaleInput } from '@pos/validation';
 

@@ -61,29 +61,32 @@ export const billGstInputSchema = z
   .refine((g) => !g.applied || g.rate != null, { error: 'Enter the GST rate', path: ['rate'] });
 
 /** `createSale` [K] (API.md §10.2): 1–100 lines, no duplicate (product, unit) pair (Q34). */
-export const createSaleInputSchema = z.object({
-  idempotencyKey: idempotencyKeySchema,
-  lines: z
-    .array(saleLineInputSchema)
-    .max(MAX_LINES_PER_SALE, { error: `At most ${String(MAX_LINES_PER_SALE)} lines` })
-    .refine(
-      (lines) =>
-        new Set(lines.map((line) => `${line.productId}:${line.unit}`)).size === lines.length,
-      { error: 'Each product and unit may appear once' },
-    ),
-  customLines: z.array(customSaleLineInputSchema).max(MAX_LINES_PER_SALE).nullish(),
-  discount: discountInputSchema,
-  billGst: billGstInputSchema,
-  paymentMethod: z.enum(PAYMENT_METHODS, { error: 'Choose a payment method' }),
-  customerId: idSchema.nullish().transform((value) => value ?? null),
-  expectedTotal: moneySchema,
-}).refine((input) => input.lines.length + (input.customLines?.length ?? 0) > 0, {
-  error: 'Add at least one item',
-  path: ['lines'],
-}).refine((input) => input.lines.length + (input.customLines?.length ?? 0) <= MAX_LINES_PER_SALE, {
-  error: `At most ${String(MAX_LINES_PER_SALE)} lines`,
-  path: ['lines'],
-});
+export const createSaleInputSchema = z
+  .object({
+    idempotencyKey: idempotencyKeySchema,
+    lines: z
+      .array(saleLineInputSchema)
+      .max(MAX_LINES_PER_SALE, { error: `At most ${String(MAX_LINES_PER_SALE)} lines` })
+      .refine(
+        (lines) =>
+          new Set(lines.map((line) => `${line.productId}:${line.unit}`)).size === lines.length,
+        { error: 'Each product and unit may appear once' },
+      ),
+    customLines: z.array(customSaleLineInputSchema).max(MAX_LINES_PER_SALE).nullish(),
+    discount: discountInputSchema,
+    billGst: billGstInputSchema,
+    paymentMethod: z.enum(PAYMENT_METHODS, { error: 'Choose a payment method' }),
+    customerId: idSchema.nullish().transform((value) => value ?? null),
+    expectedTotal: moneySchema,
+  })
+  .refine((input) => input.lines.length + (input.customLines?.length ?? 0) > 0, {
+    error: 'Add at least one item',
+    path: ['lines'],
+  })
+  .refine((input) => input.lines.length + (input.customLines?.length ?? 0) <= MAX_LINES_PER_SALE, {
+    error: `At most ${String(MAX_LINES_PER_SALE)} lines`,
+    path: ['lines'],
+  });
 export type CreateSaleInput = z.output<typeof createSaleInputSchema>;
 
 /** An order line id (bigint, sent as an ID string). */

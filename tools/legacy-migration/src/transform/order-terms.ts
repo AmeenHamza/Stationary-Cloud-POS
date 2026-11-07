@@ -1,4 +1,4 @@
-import { Decimal, ZERO, sum } from '@pos/domain';
+import { ZERO, sum } from '@pos/domain';
 
 import { paymentMethodOf } from './payment-method.js';
 import { flag, money, text } from './values.js';
@@ -6,6 +6,7 @@ import { flag, money, text } from './values.js';
 import type { Issues } from './issues.js';
 import type { LegacyRow } from '../legacy/schema-map.js';
 import type { DiscountType, OrderStatus, PaymentMethod } from '@pos/contracts';
+import type { Decimal } from '@pos/domain';
 
 type OrderRow = LegacyRow<'orders'>;
 

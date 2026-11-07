@@ -63,9 +63,13 @@ function ReceiptBarcode({ value }: { value: string }) {
     <div className="receipt-barcode" aria-hidden>
       <svg viewBox={`0 0 ${String(width)} 54`} role="img" aria-label={`Barcode ${value}`}>
         <rect x="0" y="0" width={String(width)} height="54" fill="#fff" />
-        {bits.split('').map((bit, index) => (
-          bit === '1' ? <rect key={index} x={String(index)} y="0" width="1" height="54" fill="#000" /> : null
-        ))}
+        {bits
+          .split('')
+          .map((bit, index) =>
+            bit === '1' ? (
+              <rect key={index} x={String(index)} y="0" width="1" height="54" fill="#000" />
+            ) : null,
+          )}
       </svg>
     </div>
   );
@@ -113,7 +117,10 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
         <DetailRow label="Product tax" value={formatRs(receipt.productTaxTotal)} />
       )}
       {receipt.billGstRate !== null && (
-        <DetailRow label={`Bill GST ${receipt.billGstRate}%`} value={formatRs(receipt.billGstAmount)} />
+        <DetailRow
+          label={`Bill GST ${receipt.billGstRate}%`}
+          value={formatRs(receipt.billGstAmount)}
+        />
       )}
       <div className="receipt-grand-total">
         <span>Grand Total</span>

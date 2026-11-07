@@ -20,7 +20,7 @@ export function CategoryChips({
       aria-label="Categories"
     >
       <div className="flex flex-wrap gap-2">
-          {chips.map((chip) => (
+        {chips.map((chip) => (
           <Button
             key={chip.value}
             size="sm"

@@ -123,8 +123,7 @@ export function previewCart(
     lineGross: money(line.unitPrice).times(line.quantity),
   }));
   const priced =
-    (lines.length + customLines.length > 0) &&
-    lines.every((entry) => entry.unitPrice !== null);
+    lines.length + customLines.length > 0 && lines.every((entry) => entry.unitPrice !== null);
   const itemCount =
     lines.reduce((count, entry) => count + entry.line.quantity, 0) +
     customLines.reduce((count, entry) => count + entry.line.quantity, 0);

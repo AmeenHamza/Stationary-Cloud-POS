@@ -82,7 +82,10 @@ describe('Redis client settings', () => {
   });
 
   it('fails fast for cache and publisher, queues for the subscriber', () => {
-    expect(redisOptions('cache')).toMatchObject({ enableOfflineQueue: false, commandTimeout: 1_000 });
+    expect(redisOptions('cache')).toMatchObject({
+      enableOfflineQueue: false,
+      commandTimeout: 1_000,
+    });
     expect(redisOptions('publisher')).toMatchObject({
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,

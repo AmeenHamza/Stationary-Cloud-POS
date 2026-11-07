@@ -100,9 +100,14 @@ export function ProductPicker() {
         {connection?.nodes.map((product) => (
           <ProductTile key={product.id} product={product} />
         ))}
-        {connection === undefined && loading &&
+        {connection === undefined &&
+          loading &&
           Array.from({ length: 8 }, (_, index) => (
-            <div key={`loading-${String(index)}`} className="surface-card grid gap-3 rounded-xl border p-3" aria-hidden>
+            <div
+              key={`loading-${String(index)}`}
+              className="surface-card grid gap-3 rounded-xl border p-3"
+              aria-hidden
+            >
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-5/6" />
               <Skeleton className="h-4 w-3/5" />

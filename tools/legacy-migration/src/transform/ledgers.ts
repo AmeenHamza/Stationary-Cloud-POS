@@ -1,4 +1,4 @@
-import { Decimal, ZERO, businessDateOf } from '@pos/domain';
+import { ZERO, businessDateOf } from '@pos/domain';
 
 import { paymentMethodOf } from './payment-method.js';
 import { capped, instant, money, text } from './values.js';
@@ -6,6 +6,7 @@ import { capped, instant, money, text } from './values.js';
 import type { Issues } from './issues.js';
 import type { OrderPlan } from './orders.js';
 import type { CustomerEntryType, PaymentMethod, VendorEntryType } from '@pos/contracts';
+import type { Decimal } from '@pos/domain';
 
 export interface LedgerPlan<T extends string> {
   legacyId: string;
@@ -129,7 +130,7 @@ export function planCustomerEntries(
   ): Classified<CustomerEntryType> | null => {
     const kind = text(row.type)?.toLowerCase();
     const order = ordersByLegacyId.get(text(row.orderId ?? null) ?? '');
-    const ours = order !== undefined && order.customerId === partyId ? order : undefined;
+    const ours = order?.customerId === partyId ? order : undefined;
     if (kind === 'debit') {
       const sale = ours?.paymentMethod === 'UDHAAR' && !linked.has(`sale:${ours.id}`);
       if (sale) {

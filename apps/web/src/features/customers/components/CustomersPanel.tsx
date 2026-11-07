@@ -34,16 +34,16 @@ export function CustomersPanel({
   const list = usePartyList();
   const [adding, setAdding] = useState(false);
   const { data, error } = useQuery(CustomersDocument, { variables: list.variables });
-  const { data: kpis } = useQuery(
-    CustomerKpisDocument,
-    showKpis ? undefined : skipToken,
-  );
+  const { data: kpis } = useQuery(CustomerKpisDocument, showKpis ? undefined : skipToken);
   const [create] = useMutation(CreateCustomerDocument, { refetchQueries: ['Customers'] });
   return (
     <>
       {showKpis && (
         <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <RevealKpiCard label="Total customers" value={String(kpis?.dashboard.customerCount ?? 0)} />
+          <RevealKpiCard
+            label="Total customers"
+            value={String(kpis?.dashboard.customerCount ?? 0)}
+          />
           <RevealKpiCard
             label="Customer dues"
             value={formatRs(kpis?.dashboard.customerDues ?? '0')}
