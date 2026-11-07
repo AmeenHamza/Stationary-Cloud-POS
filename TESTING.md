@@ -69,7 +69,7 @@ deadline. No real customer data: factories generate fake names and phone numbers
 | FIN-10 | Same key, different payload | `IDEMPOTENCY_KEY_REUSED` |
 | FIN-11 | 3 clients × 20 parallel sales over 2 overlapping products, lines in opposite orders | No failures after retries; final stock = initial − Σ sold; bill numbers unique and contiguous 001–060; Σ movements = stock |
 | FIN-12 | Counter rows: previous date at 049, first sale on a new date | New date starts at `001`; format `ORD-YYYYMMDD-001` |
-| FIN-13 | Sale above stock (D-16) | Succeeds; `stockWarnings` lists product; stock negative; product appears in low stock |
+| FIN-13 | Selling at or above stock (D-16) | Product at 0 or below: refused, nothing written. Stock above 0 but less than the quantity: succeeds; `stockWarnings` lists product; stock negative; product appears in low stock. Two counters selling the last unit: one succeeds, the other is refused |
 | FIN-14 | Udhaar without customer; Udhaar with customer | `CUSTOMER_REQUIRED`; exactly one `CREDIT_SALE` entry, `balance_after` correct |
 | FIN-15 | Refund 1 of 3 units, then 2 of 3 | Second refund takes the exact remainder; Σ refunds = line amount; full refund of all lines = order total exactly (GST share remainder included) |
 | FIN-16 | Refund of a box line | Restock = quantity × `pieces_per_unit` (D-14) |

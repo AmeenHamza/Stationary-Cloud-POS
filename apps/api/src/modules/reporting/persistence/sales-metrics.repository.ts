@@ -4,6 +4,8 @@ import { Prisma } from '@pos/database';
 
 import { TransactionalClient } from '../../../infrastructure/prisma/transactional-client';
 
+import type { ReportPeriod } from '@pos/contracts';
+
 /** Money comes back as text (exact decimals); dates as `YYYY-MM-DD`. */
 export interface DayRow {
   sales: string;
@@ -32,6 +34,19 @@ export interface AmountRow {
   sales: string;
   refunds: string;
 }
+
+export type MethodRow = AmountRow & { billCount: number };
+
+/** Net sales and bill counts per payment method in [from, to] (refunds by their own method). */
+const methodRows = (from: string, to: string): Prisma.Sql =>
+  Prisma.sql`
+    WITH s AS (SELECT payment_method AS key, sum(total) AS amount, count(*)::int AS bills
+               FROM orders WHERE business_date BETWEEN ${from}::date AND ${to}::date GROUP BY 1),
+         r AS (SELECT payment_method AS key, sum(amount) AS amount FROM refunds
+               WHERE business_date BETWEEN ${from}::date AND ${to}::date GROUP BY 1)
+    SELECT coalesce(s.key, r.key)::text AS key, coalesce(s.amount, 0)::text AS sales,
+           coalesce(r.amount, 0)::text AS refunds, coalesce(s.bills, 0) AS "billCount"
+    FROM s FULL JOIN r ON r.key = s.key`;
 
 /** Bills by bill date minus refunds by refund date, per key (Q28: closed days never change). */
 const net = (key: Prisma.Sql, refundKey: Prisma.Sql, from: string, to: string): Prisma.Sql =>
@@ -145,15 +160,21 @@ export class SalesMetricsRepository {
     return row;
   }
 
-  /** Net sales and bill counts per payment method in [from, to] (refunds by their own method). */
-  methods(from: string, to: string): Promise<(AmountRow & { billCount: number })[]> {
-    return this.db.client.$queryRaw<(AmountRow & { billCount: number })[]>`
-      WITH s AS (SELECT payment_method AS key, sum(total) AS amount, count(*)::int AS bills
-                 FROM orders WHERE business_date BETWEEN ${from}::date AND ${to}::date GROUP BY 1),
-           r AS (SELECT payment_method AS key, sum(amount) AS amount FROM refunds
-                 WHERE business_date BETWEEN ${from}::date AND ${to}::date GROUP BY 1)
-      SELECT coalesce(s.key, r.key)::text AS key, coalesce(s.amount, 0)::text AS sales,
-             coalesce(r.amount, 0)::text AS refunds, coalesce(s.bills, 0) AS "billCount"
-      FROM s FULL JOIN r ON r.key = s.key`;
+  methods(from: string, to: string): Promise<MethodRow[]> {
+    return this.db.client.$queryRaw<MethodRow[]>(methodRows(from, to));
+  }
+
+  /** The same rows for today, the week and the month in one statement (the live dashboard's budget). */
+  methodPeriods(
+    today: string,
+    weekStart: string,
+    monthStart: string,
+  ): Promise<(MethodRow & { period: ReportPeriod })[]> {
+    return this.db.client.$queryRaw<(MethodRow & { period: ReportPeriod })[]>(Prisma.sql`
+      SELECT 'TODAY' AS period, d.* FROM (${methodRows(today, today)}) d
+      UNION ALL
+      SELECT 'THIS_WEEK', w.* FROM (${methodRows(weekStart, today)}) w
+      UNION ALL
+      SELECT 'THIS_MONTH', m.* FROM (${methodRows(monthStart, today)}) m`);
   }
 }

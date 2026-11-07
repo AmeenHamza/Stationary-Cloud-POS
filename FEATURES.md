@@ -52,7 +52,7 @@ These override the screenshots wherever they differ. **D** = decided by the owne
 | D-13 | Receipts | **80 mm thermal** printer (Q6) |
 | D-14 | Refund stock | Refunded items **always** go back into stock (Q7) |
 | D-15 | Udhaar sale | **Full credit only**: pick or quick-add a customer; the whole bill goes to their khata (Q10) |
-| D-16 | Selling above stock | **Warn, then allow.** Stock may go negative and then appears on the low-stock list (Q12) |
+| D-16 | Selling at or above stock | **Block at 0 or below; otherwise warn, then allow.** A product already at 0 or below cannot be sold. Selling more than the stock left warns and goes through, so stock may go negative and then appears on the low-stock list (Q12). Changed 2026-11-07; it was "warn, then allow" in every case |
 | D-17 | Boxes | Cashier chooses Piece or Box; **each product may have its own box price** (Q11) |
 | D-18 | Stock reduction | **New feature:** admin-only increase/decrease with a required reason, logged (Q15) |
 | D-19 | Clone | **Keep as old:** each new barcode becomes a separate product copied from the original (Q16) |
@@ -236,7 +236,7 @@ relevance, pagination and backend entities. "Real-time" and "pagination" entries
 | Payment (C) `#43`, `#44`, `#T` | Order summary · Subtotal · Product Tax · Bill GST (if applied) · TOTAL · Discount: No Discount / Flat (Rs) / Percentage (%) · Bill GST checkbox with editable rate (default 18) · Methods: Cash, Card, Easypaisa, Jazzcash, Bank Transfer, Udhaar (Credit) · Grand Total · "Process Payment · Rs X" |
 | Worked example (C) | Subtotal 240.00, product tax 0.00, Bill GST 18% = 43.20, total 283.20 |
 | Not captured | Receipt printing, success state, Udhaar customer selection, box vs piece selling, insufficient-stock handling |
-| Decided | 80 mm receipt (D-13) · Piece/Box choice with own box price (D-17) · warn-then-allow above stock (D-16) · Udhaar = full credit to a picked or quick-added customer (D-15) · offline banner, no offline billing (D-05) |
+| Decided | 80 mm receipt (D-13) · Piece/Box choice with own box price (D-17) · no sale at 0 or below, warn-then-allow above stock (D-16) · Udhaar = full credit to a picked or quick-added customer (D-15) · offline banner, no offline billing (D-05) |
 | Real-time | Stock shown on tiles; price and catalogue changes |
 | Pagination | The product grid must be server-searched and paged (50 max), never the full catalogue |
 | Entities | Product, Order, OrderLine, Payment, CustomerLedger |
@@ -331,7 +331,7 @@ relevance, pagination and backend entities. "Real-time" and "pagination" entries
 | BR-18 | The bill discount is applied before both taxes (see A-01) | D-08 | Owner |
 | BR-19 | Money is kept to 2 decimals; no rounding of the final total | D-09 | Owner |
 | BR-20 | Refunds always return items to stock | D-14 | Owner |
-| BR-21 | Selling above recorded stock warns, then allows; stock may go negative | D-16 | Owner |
+| BR-21 | A product at 0 or below cannot be sold. Selling more than the recorded stock left warns, then allows; stock may go negative | D-16 | Owner |
 | BR-22 | A product may have a separate box price; selling a box deducts pieces-per-box from stock | D-17 | Owner |
 | BR-23 | Bills and khata entries are archived, never deleted | D-12 | Owner |
 | BR-24 | Stock decreases other than sales require an admin and a reason | D-18 | Owner |
@@ -378,7 +378,7 @@ Status for every row: **Not started**.
 | F-31 | **New:** admin staff management (create, disable, reset password) | D-10 | Must |
 | F-32 | **New:** admin-only stock adjustment with reason and log | D-18 | Must |
 | F-33 | **New:** Piece/Box choice at the counter with box price | D-17 | Must |
-| F-34 | **New:** low-stock warning that still allows the sale | D-16 | Must |
+| F-34 | **New:** above-stock warning that still allows the sale, unless the product is already at 0 or below | D-16 | Must |
 | F-35 | **New:** archive view for old bills and khata entries | D-12 | Must |
 | F-36 | **New:** migration of all old data via an owner-run script | D-21 | Must |
 | F-37 | **New:** connection banner; billing disabled while offline | D-05 | Must |
@@ -470,7 +470,7 @@ results, compliance audit, limitations). Infrastructure phases 1–6 are tracked
 | F-18 | Terminal search, scan, chips, sort | F-08, F-12 | 9 | COMPLETE | [F-18](docs/progress/F-18.md) |
 | F-19 | Cart | F-18 | 9 | COMPLETE | [F-19](docs/progress/F-19.md) |
 | F-33 | Piece/Box with box price | F-19 | 9 | COMPLETE | [F-33](docs/progress/F-33.md) |
-| F-34 | Above-stock warning, sale allowed | F-19 | 9 | COMPLETE | [F-34](docs/progress/F-34.md) |
+| F-34 | Above-stock warning, sale allowed unless already at 0 or below | F-19 | 9 | COMPLETE | [F-34](docs/progress/F-34.md) |
 | F-20 | Bill discount | F-19 | 9 | COMPLETE | [F-20](docs/progress/F-20.md) |
 | F-21 | Product tax + Bill GST | F-19 | 9 | COMPLETE | [F-21](docs/progress/F-21.md) |
 | F-22 | Six payment methods incl. Udhaar | F-19, F-25 | 9 | COMPLETE | [F-22](docs/progress/F-22.md) |

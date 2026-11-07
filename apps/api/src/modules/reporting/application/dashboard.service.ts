@@ -4,13 +4,30 @@ import { addDays, Decimal, round2, startOfMonth, startOfWeek } from '@pos/domain
 
 import { moneyText } from '../../../common/graphql/scalars';
 import { ClockService } from '../../../common/time/clock.service';
-import { SalesMetricsRepository } from '../persistence/sales-metrics.repository';
+import { SalesMetricsRepository, type MethodRow } from '../persistence/sales-metrics.repository';
 import { StockMetricsRepository } from '../persistence/stock-metrics.repository';
 
 import { byKey, netOf } from './report-format';
 
 import type { PaymentMethod, RankingDirection, ReportPeriod } from '@pos/contracts';
 import type { DailySalesArgs, ProductRankingArgs } from '@pos/validation';
+
+interface MethodTotal {
+  method: PaymentMethod;
+  total: string;
+  billCount: number;
+}
+
+/** One total per payment method, largest first, then by name. */
+function methodTotals(rows: readonly MethodRow[]): MethodTotal[] {
+  return rows
+    .map((row) => ({
+      method: row.key as PaymentMethod,
+      total: netOf(row),
+      billCount: row.billCount,
+    }))
+    .sort((a, b) => new Decimal(b.total).comparedTo(a.total) || a.method.localeCompare(b.method));
+}
 
 /**
  * Dashboard figures (F-06, F-07; API.md §6.3) for one business date. Periods follow Q18 (Asia/Karachi
@@ -124,22 +141,16 @@ export class DashboardService {
   }
 
   /** Net sales per payment method in the period, largest first (Q31: this month by default). */
-  methods(date: string, period: ReportPeriod) {
-    const from =
-      period === 'TODAY' ? date : period === 'THIS_WEEK' ? startOfWeek(date) : startOfMonth(date);
-    return this.methodsBetween(from, date);
+  /** Today, this week and this month in one statement: the live dashboard shows all three. */
+  async methodsByPeriod(date: string): Promise<Record<ReportPeriod, MethodTotal[]>> {
+    const rows = await this.sales.methodPeriods(date, startOfWeek(date), startOfMonth(date));
+    const of = (period: ReportPeriod) => methodTotals(rows.filter((row) => row.period === period));
+    return { TODAY: of('TODAY'), THIS_WEEK: of('THIS_WEEK'), THIS_MONTH: of('THIS_MONTH') };
   }
 
   /** Net sales and bills per payment method in [from, to], largest first. */
   async methodsBetween(from: string, to: string) {
-    const rows = await this.sales.methods(from, to);
-    return rows
-      .map((row) => ({
-        method: row.key as PaymentMethod,
-        total: netOf(row),
-        billCount: row.billCount,
-      }))
-      .sort((a, b) => new Decimal(b.total).comparedTo(a.total) || a.method.localeCompare(b.method));
+    return methodTotals(await this.sales.methods(from, to));
   }
 
   /** Top or bottom products by net units over the `days` days ending on `date`. */

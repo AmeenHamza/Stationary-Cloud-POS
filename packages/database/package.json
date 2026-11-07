@@ -27,7 +27,7 @@
     "generate": "prisma generate",
     "build": "prisma generate && tsup",
     "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json",
-    "lint": "eslint .",
+    "lint": "prisma generate && eslint .",
     "migrate:dev": "tsx scripts/guard-local.ts && prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "test:integration": "vitest run --config vitest.integration.config.ts",

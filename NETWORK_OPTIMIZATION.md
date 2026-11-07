@@ -272,7 +272,7 @@ Database bytes per request (averages): `TerminalProducts` 3.9 KB, `ProductByBarc
 | 50 admin product rows (NET-01) | ≤ 25 KB | PASS (24,739 B) |
 | DB bytes, scan-based 3-line bill: 3 lookups + `createSale` (NET-03) | ≤ 25 KB | PASS (≈ 18.8 KB: 3 × 1.7 KB scans + 13.6 KB sale, 17 statements). The first measurement was 29.5 KB: stock was updated one product at a time (UPDATE, re-read with category, movement INSERT per line, 12 statements for 3 lines); it is now one UPDATE and one INSERT per bill |
 | `createSale` response with its receipt, 3 lines | ≤ 6 KB | PASS (`sales-budgets.int.spec.ts`) |
-| `DashboardLive` response and statements (`reporting-dashboard.int.spec.ts`) | ≤ 3 KB | PASS: ≤ 3 KB in ≤ 5 SQL statements |
+| `DashboardLive` response and statements (`reporting-dashboard.int.spec.ts`) | ≤ 3 KB | PASS: ≤ 3 KB in ≤ 5 SQL statements (4 since 2026-11-07: the three payment-method periods share one statement) |
 | `DashboardHistory` response | ≤ 8 KB | PASS |
 | Product export of 10,000 rows (`catalog-io-export.int.spec.ts`) | bounded reads | PASS: streamed (chunked), 2 statements per batch of 500 |
 | AI requests to Groq, all six features × 3 languages (`ai-assistant.int.spec.ts`, small data) | ≤ 8 KB each | PASS: 0.9–2.3 KB of messages per request (2026-11-01); a repeat within 15 minutes is served from Redis with no Groq call |

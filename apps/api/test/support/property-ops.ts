@@ -45,6 +45,14 @@ const pick = <T>(world: World, items: readonly T[]): T => {
 const between = (world: World, low: number, high: number): number =>
   low + Math.floor(world.rand() * (high - low + 1));
 
+/** Sales refuse a product at 0 or below (D-16), so one that has run out is restocked first. */
+async function restockIfOut(world: World, productId: string): Promise<void> {
+  const stock = await sales.stockOf(world.t.prisma, productId);
+  if (stock > 0) return;
+  const input = catalog.restockInput(productId, { pieces: between(world, 1, 10) - stock });
+  dataOf(await asUser(world.t.h.url, world.t.admin, catalog.RESTOCK, { input }));
+}
+
 /** A random 1–3 line sale, priced with the shared domain function for `expectedTotal`. */
 export async function sell(world: World): Promise<void> {
   const chosen = new Map<string, { productId: string; unit: 'PIECE' | 'BOX'; quantity: number }>();
@@ -58,6 +66,9 @@ export async function sell(world: World): Promise<void> {
     });
   }
   const lines = [...chosen.values()];
+  for (const line of lines) {
+    await restockIfOut(world, line.productId);
+  }
   const discount = pick(world, [
     { type: 'NONE' },
     { type: 'FLAT', amount: '1.00' },

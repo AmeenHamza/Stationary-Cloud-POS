@@ -2,6 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import { normalizeNameKey } from '@pos/domain';
 
+import { asUser } from './staff';
+
+import type { RoleHarness } from './roles';
 import type { AppPrismaClient } from '../../src/infrastructure/prisma/prisma.module';
 
 export const CREATE_SALE = `mutation Sale($input: CreateSaleInput!) {
@@ -90,6 +93,10 @@ export function saleInput(
     ...overrides,
   };
 }
+
+/** `createSale` as the cashier. */
+export const sellAsCashier = (t: RoleHarness, input: Record<string, unknown>) =>
+  asUser<SaleResult>(t.h.url, t.cashier, CREATE_SALE, { input });
 
 export async function stockOf(prisma: AppPrismaClient, productId: string): Promise<number> {
   const row = await prisma.product.findUnique({

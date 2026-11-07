@@ -24,7 +24,7 @@ describe('dashboard live figures (F-06, API.md §6.3, Q18, Q28, Q30, Q31)', () =
       LIVE,
       {},
     );
-    expect(t.h.statements.count).toBeLessThanOrEqual(5); // day, inventory, khata totals once, methods × 3
+    expect(t.h.statements.count).toBeLessThanOrEqual(5); // day, inventory, khata totals, payment methods
     expect(Buffer.byteLength(JSON.stringify(response.body))).toBeLessThanOrEqual(3 * 1_024);
     expect(dataOf(response).dashboard).toEqual({
       date: today,

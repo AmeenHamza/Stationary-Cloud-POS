@@ -123,7 +123,7 @@ export class DashboardResolver {
   }
 
   @ResolveField(() => [PaymentMethodTotal], { description: 'At most 6 rows (Q31).' })
-  paymentMethods(
+  async paymentMethods(
     @Parent() dashboard: Dashboard,
     @Args(
       'period',
@@ -132,7 +132,7 @@ export class DashboardResolver {
     )
     period: ReportPeriod,
   ) {
-    return this.service.methods(dashboard.date, period);
+    return (await this.methodsByPeriod(dashboard))[period];
   }
 
   @ResolveField(() => [ProductSales], { description: 'At most 10 rows, by units sold.' })
@@ -143,37 +143,31 @@ export class DashboardResolver {
     return this.service.ranking(dashboard.date, args);
   }
 
-  /** Discount and tax share one aggregate; it runs once per request when both are selected. */
+  /** Discount and tax share one aggregate. */
   private periods(dashboard: Dashboard) {
-    const cached = dashboard.memo.get('periods') as
-      ReturnType<DashboardService['periods']> | undefined;
-    if (cached !== undefined) {
-      return cached;
-    }
-    const pending = this.service.periods(dashboard.date);
-    dashboard.memo.set('periods', pending);
-    return pending;
+    return this.once(dashboard, 'periods', () => this.service.periods(dashboard.date));
   }
 
   private salesTotals(dashboard: Dashboard) {
-    const cached = dashboard.memo.get('salesTotals') as
-      ReturnType<DashboardService['salesTotals']> | undefined;
-    if (cached !== undefined) {
-      return cached;
-    }
-    const pending = this.service.salesTotals(dashboard.date);
-    dashboard.memo.set('salesTotals', pending);
-    return pending;
+    return this.once(dashboard, 'salesTotals', () => this.service.salesTotals(dashboard.date));
   }
 
   private khata(dashboard: Dashboard) {
-    const cached = dashboard.memo.get('khata') as
-      ReturnType<DashboardService['khataTotals']> | undefined;
+    return this.once(dashboard, 'khata', () => this.service.khataTotals());
+  }
+
+  private methodsByPeriod(dashboard: Dashboard) {
+    return this.once(dashboard, 'methods', () => this.service.methodsByPeriod(dashboard.date));
+  }
+
+  /** Runs `query` at most once per request, so fields sharing an aggregate share one statement. */
+  private once<T>(dashboard: Dashboard, key: string, query: () => Promise<T>): Promise<T> {
+    const cached = dashboard.memo.get(key) as Promise<T> | undefined;
     if (cached !== undefined) {
       return cached;
     }
-    const pending = this.service.khataTotals();
-    dashboard.memo.set('khata', pending);
+    const pending = query();
+    dashboard.memo.set(key, pending);
     return pending;
   }
 }

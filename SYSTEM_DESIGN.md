@@ -116,7 +116,7 @@ cached **before** revocation, at most 300 s, and the tombstone closes it as soon
 - Barcode: the search input keeps focus. On `Enter`, `productByBarcode(text)` runs; a match adds one unit
   (Q22 default); no match falls back to name search.
 - Stock warning (D-16): when `quantity × piecesPerUnit > stockPieces` (cached), the line shows a warning. The
-  sale is still allowed.
+  sale is still allowed, unless the product is already at 0 or below: the server refuses that sale.
 - Persistence: the cart is saved to `localStorage` key `pos:cart:{userId}` on every change and restored on
   load. It is cleared only after a **confirmed** sale.
 
@@ -605,7 +605,7 @@ with `=`, `+`, `-` or `@` (formula injection).
 | # | Scenario | Behaviour | Recovery |
 |---|---|---|---|
 | F1 | Network drops during `createSale` | Pending record kept; same key retried | Replay returns the original sale; never a duplicate (§3.4) |
-| F2 | Two counters sell the last unit at once | Row lock serializes; both succeed; stock −1; second gets a warning (D-16) | Item appears on the low-stock list for correction |
+| F2 | Two counters sell the last unit at once | Row lock serializes; the first sale succeeds and takes stock to 0; the second reads 0 under the lock and is refused (D-16) | Second cashier removes the item, or it is restocked |
 | F3 | Price edited while a cart is open | Cart preview updates via `product.changed`; if not yet received, server returns `PRICE_CHANGED` | Cashier confirms the new total |
 | F4 | API crashes mid-transaction | Postgres rolls back; nothing partial | Client retry with the same key |
 | F5 | API crashes after commit, before publish | Rows stay unpublished | Drained at next startup; that instance's clients reconnect and reconcile |
