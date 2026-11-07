@@ -212,7 +212,7 @@ Rules:
 
 ### 3.5 Receipt printing
 
-`ReceiptPrint` renders `ReceiptBody` into a print-only portal styled by `styles/print-receipt.css`
+`ReceiptPrint` renders `ReceiptBody` into a print-only portal styled by `styles/print-receipt*.css`
 (`@page { size: 80mm auto; margin: 0 }`, 72 mm content width). It awaits `document.fonts.ready`, then calls
 `window.print()`. Counter PCs use Chrome `--kiosk-printing` for silent printing (DEPLOYMENT.md §9).
 Receipt content (Q6b default): shop name, address, phone, bill number, date and time, cashier, lines

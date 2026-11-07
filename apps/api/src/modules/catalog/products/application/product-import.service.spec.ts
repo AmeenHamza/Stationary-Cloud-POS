@@ -17,6 +17,16 @@ function legacyRow() {
   return { ...row, categoryId: null };
 }
 
+function serviceWith(products: unknown, stock: unknown) {
+  return new ProductImportService(
+    products as ConstructorParameters<typeof ProductImportService>[0],
+    stock as ConstructorParameters<typeof ProductImportService>[1],
+    {} as ConstructorParameters<typeof ProductImportService>[2],
+    {} as ConstructorParameters<typeof ProductImportService>[3],
+    {} as ConstructorParameters<typeof ProductImportService>[4],
+  );
+}
+
 describe('legacy product import stock', () => {
   it('preserves the stock of an existing barcode match', async () => {
     const products = {
@@ -24,13 +34,7 @@ describe('legacy product import stock', () => {
       update: vi.fn().mockResolvedValue({ id: 'existing' }),
     };
     const stock = { insertMovements: vi.fn() };
-    const service = new ProductImportService(
-      products as unknown as ConstructorParameters<typeof ProductImportService>[0],
-      stock as unknown as ConstructorParameters<typeof ProductImportService>[1],
-      {} as ConstructorParameters<typeof ProductImportService>[2],
-      {} as ConstructorParameters<typeof ProductImportService>[3],
-      {} as ConstructorParameters<typeof ProductImportService>[4],
-    );
+    const service = serviceWith(products, stock);
     await expect(service.apply(legacyRow(), 'job', 'actor')).resolves.toEqual({
       productId: 'existing',
       created: false,
@@ -48,13 +52,7 @@ describe('legacy product import stock', () => {
       insert: vi.fn().mockResolvedValue({ id: 'new' }),
     };
     const stock = { insertMovements: vi.fn().mockResolvedValue(undefined) };
-    const service = new ProductImportService(
-      products as unknown as ConstructorParameters<typeof ProductImportService>[0],
-      stock as unknown as ConstructorParameters<typeof ProductImportService>[1],
-      {} as ConstructorParameters<typeof ProductImportService>[2],
-      {} as ConstructorParameters<typeof ProductImportService>[3],
-      {} as ConstructorParameters<typeof ProductImportService>[4],
-    );
+    const service = serviceWith(products, stock);
     await expect(service.apply(legacyRow(), 'job', 'actor')).resolves.toEqual({
       productId: 'new',
       created: true,

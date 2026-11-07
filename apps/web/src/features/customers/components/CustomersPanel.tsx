@@ -1,17 +1,13 @@
 'use client';
 
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
-import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { formatRs } from '@pos/domain';
-
 import { PartyFormDialog } from '@/components/ledger/PartyFormDialog';
 import { PartyListView } from '@/components/ledger/PartyListView';
+import { PartyPanelHeader } from '@/components/ledger/PartyPanelHeader';
 import { usePartyList } from '@/components/ledger/usePartyList';
-import { RevealKpiCard } from '@/components/metrics/RevealKpiCard';
-import { Button } from '@/components/ui/button';
 
 import { CUSTOMER_BALANCE_LABELS } from '../customer-labels';
 import {
@@ -38,28 +34,22 @@ export function CustomersPanel({
   const [create] = useMutation(CreateCustomerDocument, { refetchQueries: ['Customers'] });
   return (
     <>
-      {showKpis && (
-        <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <RevealKpiCard
-            label="Total customers"
-            value={String(kpis?.dashboard.customerCount ?? 0)}
-          />
-          <RevealKpiCard
-            label="Customer dues"
-            value={formatRs(kpis?.dashboard.customerDues ?? '0')}
-          />
-        </div>
-      )}
-      <div className="mb-4 flex justify-end">
-        <Button
-          variant="brand"
-          onClick={() => {
-            setAdding(true);
-          }}
-        >
-          <PlusIcon /> Add customer
-        </Button>
-      </div>
+      <PartyPanelHeader
+        kpis={
+          showKpis
+            ? {
+                countLabel: 'Total customers',
+                count: kpis?.dashboard.customerCount,
+                amountLabel: 'Customer dues',
+                amount: kpis?.dashboard.customerDues,
+              }
+            : null
+        }
+        addLabel="Add customer"
+        onAdd={() => {
+          setAdding(true);
+        }}
+      />
       <PartyListView
         {...list.view}
         noun="customer"

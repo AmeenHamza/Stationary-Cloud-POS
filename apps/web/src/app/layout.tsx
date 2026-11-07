@@ -1,5 +1,7 @@
 import './globals.css';
 import '@/styles/print-receipt.css';
+import '@/styles/print-receipt-items.css';
+import '@/styles/print-view.css';
 
 import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme/theme';
 import { AppProviders } from '@/providers/AppProviders';

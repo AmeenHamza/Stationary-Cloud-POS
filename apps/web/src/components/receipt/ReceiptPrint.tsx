@@ -11,7 +11,7 @@ const noSubscribe = (): (() => void) => () => undefined;
 
 /**
  * Prints a receipt (SYSTEM_DESIGN.md §3.5): the body goes into a print-only portal styled by
- * `styles/print-receipt.css`, then, once fonts are ready, the browser prints. Each new `printCount`
+ * `styles/print-receipt*.css`, then, once fonts are ready, the browser prints. Each new `printCount`
  * prints again (reprint). Counter PCs print silently with Chrome `--kiosk-printing`.
  */
 export function ReceiptPrint({ receipt, printCount }: { receipt: Receipt; printCount: number }) {

@@ -12,7 +12,7 @@ const noSubscribe = (): (() => void) => () => undefined;
 
 /**
  * Prints a business report on A4 (F-29 "Print"): the answer goes into a print-only portal on its
- * own named page (`styles/print-receipt.css`), then the browser prints. Each `printCount` prints again.
+ * own named page (`styles/print-view.css`), then the browser prints. Each `printCount` prints again.
  */
 export function AiReportPrint({
   result,

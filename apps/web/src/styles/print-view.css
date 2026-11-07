@@ -1,0 +1,42 @@
+/* AI business reports (F-29) print on A4 through their own named page. */
+@page report {
+  size: A4;
+  margin: 15mm;
+}
+
+.report-print {
+  page: report;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #000;
+}
+
+.report-print h1 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* On screen the print copies are hidden; when printing, only they are shown. */
+@media screen {
+  .receipt-print,
+  .report-print {
+    display: none;
+  }
+}
+
+@media print {
+  body > *:not(.receipt-print, .report-print) {
+    display: none !important;
+  }
+
+  .receipt-print,
+  .report-print {
+    display: block;
+    background: #fff;
+  }
+
+  .receipt-print {
+    padding: 0 4mm;
+  }
+}

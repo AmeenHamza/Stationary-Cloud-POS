@@ -1,17 +1,13 @@
 'use client';
 
 import { skipToken, useMutation, useQuery } from '@apollo/client/react';
-import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { formatRs } from '@pos/domain';
-
 import { PartyFormDialog } from '@/components/ledger/PartyFormDialog';
 import { PartyListView } from '@/components/ledger/PartyListView';
+import { PartyPanelHeader } from '@/components/ledger/PartyPanelHeader';
 import { usePartyList } from '@/components/ledger/usePartyList';
-import { RevealKpiCard } from '@/components/metrics/RevealKpiCard';
-import { Button } from '@/components/ui/button';
 
 import {
   CreateVendorDocument,
@@ -39,25 +35,22 @@ export function VendorsPanel({
   const connection = data?.vendors;
   return (
     <>
-      {showKpis && (
-        <div className="mb-4 grid gap-3 md:grid-cols-2">
-          <RevealKpiCard label="Total vendors" value={String(kpis?.dashboard.vendorCount ?? 0)} />
-          <RevealKpiCard
-            label="Total amount owed"
-            value={formatRs(kpis?.dashboard.vendorOwes ?? '0')}
-          />
-        </div>
-      )}
-      <div className="mb-4 flex justify-end">
-        <Button
-          variant="brand"
-          onClick={() => {
-            setAdding(true);
-          }}
-        >
-          <PlusIcon /> Add vendor
-        </Button>
-      </div>
+      <PartyPanelHeader
+        kpis={
+          showKpis
+            ? {
+                countLabel: 'Total vendors',
+                count: kpis?.dashboard.vendorCount,
+                amountLabel: 'Total amount owed',
+                amount: kpis?.dashboard.vendorOwes,
+              }
+            : null
+        }
+        addLabel="Add vendor"
+        onAdd={() => {
+          setAdding(true);
+        }}
+      />
       <PartyListView
         {...list.view}
         noun="vendor"

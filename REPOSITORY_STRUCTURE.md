@@ -266,7 +266,7 @@ apps/web/
     ├── components/                   # feature-agnostic UI, never imports features/
     │   ├── ui/         # shadcn primitives: button, input, select, dialog, table, badge, card, dropdown-menu, command, popover, skeleton, tabs, checkbox, label, form, sonner, alert, tooltip
     │   ├── data/       CursorPager.tsx (pages + connection) · EmptyState.tsx · DataTable.tsx · TableSkeleton.tsx · SearchInput.tsx · ArchivedToggle.tsx
-    │   ├── ledger/     PartyListView · PartyTable · PartyLedgerView · LedgerTable · KhataActions · KhataEntryDialog · PartyFormDialog · ArchiveConfirm · BalanceText · khata-labels.ts · usePartyList.ts   # shared by customers + vendors
+    │   ├── ledger/     PartyPanelHeader · PartyListView · PartyTable · PartyLedgerView · LedgerTable · KhataActions · KhataEntryDialog · PartyFormDialog · ArchiveConfirm · BalanceText · khata-labels.ts · usePartyList.ts   # shared by customers + vendors
     │   ├── receipt/    ReceiptBody.tsx · ReceiptPrint.tsx (print-only portal; terminal and order-history reprint)
     │   ├── charts/     ColumnChart.tsx · RankedBars.tsx · ChartTable.tsx · chart-scale.ts (validated palette tokens, ADR-039)
     │   ├── layout/     AdminShell.tsx (sidebar + nav links; account menu passed in) · BrandMark.tsx · PageHeader.tsx · ThemeToggle.tsx · ConnectionBanner.tsx (with realtime)
@@ -290,7 +290,7 @@ apps/web/
     │   └── env.ts                    # Zod-validated NEXT_PUBLIC_* vars
     ├── providers/      AppProviders.tsx · ApolloAppProvider.tsx · RealtimeProvider.tsx · realtime-context.ts · ThemeProvider.tsx
     ├── hooks/          useCursorPages.ts (keyset forward/back) · useOnlineStatus.ts · useFileDownload.ts (REST downloads with the cookie)
-    └── styles/         print-receipt.css
+    └── styles/         print-receipt.css · print-receipt-items.css · print-view.css
 ```
 
 The brief's suggested `types/` folder is **omitted**. Types come from GraphQL Codegen, `@pos/contracts` and
