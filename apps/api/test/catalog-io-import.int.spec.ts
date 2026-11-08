@@ -27,7 +27,7 @@ describe('product import (F-11, SYSTEM_DESIGN.md §7, Q14, Q37)', () => {
       ['IMP-EXIST-1', 'Existing renamed', '', '12.00', 99], // stock column ignored (BR-03)
       ['IMP-BAD-1', 'Bad price', '', '12.345', 0],
       ['IMP-NEW-1', 'Repeated barcode', '', '10', 0],
-      ['IMP-CAT-1', 'Unknown category', 'Nope', '10', 0],
+      ['IMP-CAT-1', 'New category item', 'Brand new', '10', 0], // the category is created (D-29)
       ['', 'No barcode item', '', '5', 0],
     ]);
     const response = await upload(t.h.url, t.admin, 'products.csv', file);
@@ -35,7 +35,7 @@ describe('product import (F-11, SYSTEM_DESIGN.md §7, Q14, Q37)', () => {
     const jobId = String(response.body['importJobId']);
     const done = await completion(events, jobId);
     await events.close();
-    expect(done).toMatchObject({ succeededRows: 3, failedRows: 3 });
+    expect(done).toMatchObject({ succeededRows: 4, failedRows: 2 });
 
     const renamed = await t.prisma.product.findUnique({
       where: { id: existing.id },
@@ -63,10 +63,9 @@ describe('product import (F-11, SYSTEM_DESIGN.md §7, Q14, Q37)', () => {
       .replace(/^\uFEFF/, '')
       .trim()
       .split(/\r?\n/);
-    expect(lines).toHaveLength(4);
+    expect(lines).toHaveLength(3);
     expect(lines[1]).toMatch(/^4,IMP-BAD-1,Bad price,/);
     expect(lines[2]).toMatch(/^5,IMP-NEW-1,Repeated barcode,Barcode repeats line 2$/);
-    expect(lines[3]).toBe('6,IMP-CAT-1,Unknown category,"Unknown category ""Nope"""'); // CSV quoting
 
     const rows = await asUser<{
       importJobRows: { nodes: { rowNumber: number }[]; totalCount: number };
@@ -78,13 +77,13 @@ describe('product import (F-11, SYSTEM_DESIGN.md §7, Q14, Q37)', () => {
     );
     expect(dataOf(rows).importJobRows).toEqual({
       nodes: [{ rowNumber: 4 }, { rowNumber: 5 }],
-      totalCount: 3,
+      totalCount: 2,
     });
     const bulk = await t.prisma.outboxEvent.findFirst({
       where: { type: 'catalog.bulkChanged' },
       select: { payload: true },
     });
-    expect(bulk?.payload).toEqual({ reason: 'IMPORT', importJobId: jobId, changedCount: 3 });
+    expect(bulk?.payload).toEqual({ reason: 'IMPORT', importJobId: jobId, changedCount: 4 });
     const integrity = await runIntegrityChecks((sql) => t.prisma.$queryRaw(sql));
     expect(integrity.find((check) => check.name === 'Stock ledger')?.count).toBe(0);
   });

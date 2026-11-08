@@ -1,6 +1,6 @@
 'use client';
 
-import { BookOpenIcon } from 'lucide-react';
+import { BookOpenIcon, Trash2Icon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,12 +23,15 @@ export function PartyTable({
   labels,
   detailHeading,
   onOpen,
+  onDelete,
 }: {
   parties: readonly PartySummary[];
   labels: BalanceLabels;
   /** Column for `detail` (e.g. "Products"); omitted when the kind has none. */
   detailHeading?: string;
   onOpen: (party: PartySummary) => void;
+  /** Offered only to roles that may delete (D-28). */
+  onDelete?: (party: PartySummary) => void;
 }) {
   return (
     <Table>
@@ -59,7 +62,7 @@ export function PartyTable({
             <TableCell className="text-right">
               <BalanceText balance={party.balance} labels={labels} />
             </TableCell>
-            <TableCell className="text-right">
+            <TableCell className="text-right whitespace-nowrap">
               <Button
                 size="sm"
                 variant="outline"
@@ -69,6 +72,19 @@ export function PartyTable({
               >
                 <BookOpenIcon /> Open khata
               </Button>
+              {onDelete !== undefined && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-1 text-destructive hover:text-destructive"
+                  aria-label={`Delete ${party.name}`}
+                  onClick={() => {
+                    onDelete(party);
+                  }}
+                >
+                  <Trash2Icon />
+                </Button>
+              )}
             </TableCell>
           </TableRow>
         ))}

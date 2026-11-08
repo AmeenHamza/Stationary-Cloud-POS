@@ -9,13 +9,20 @@ export const ORDER_STATUS_LABEL: Readonly<Record<OrderStatus, string>> = {
   REFUNDED: 'Refunded',
 };
 
-/** "−Rs 400.00 (Flat)" or "−Rs 24.00 (10%)" as the old order history showed it; "—" for none. */
+/**
+ * "−Rs 400.00 (Flat)" or "−Rs 24.00 (10%)" as the old order history showed it, "−Rs 50.00 (Items)"
+ * or "−Rs 90.00 (10% + items)" with item discounts (D-27); "—" for none.
+ */
 export function discountLabel(
-  order: Pick<OrderRowFieldsFragment, 'discountType' | 'discountValue' | 'discountTotal'>,
+  order: Pick<
+    OrderRowFieldsFragment,
+    'discountType' | 'discountValue' | 'discountTotal' | 'itemDiscountTotal'
+  >,
 ): string {
+  const onItems = order.itemDiscountTotal !== '0.00';
   if (order.discountType === 'NONE') {
-    return '—';
+    return onItems ? `−${formatRs(order.discountTotal)} (Items)` : '—';
   }
   const kind = order.discountType === 'FLAT' ? 'Flat' : `${order.discountValue}%`;
-  return `−${formatRs(order.discountTotal)} (${kind})`;
+  return `−${formatRs(order.discountTotal)} (${kind}${onItems ? ' + items' : ''})`;
 }

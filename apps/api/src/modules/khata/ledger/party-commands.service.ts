@@ -7,7 +7,7 @@ import { ClockService } from '../../../common/time/clock.service';
 import { UnitOfWork } from '../../../infrastructure/unit-of-work/unit-of-work';
 import { AuditService } from '../../audit';
 
-import { mapPartyErrors } from './party-errors';
+import { mapPartyErrors, partyHasHistory, refuseIfReferenced } from './party-errors';
 
 import type { LedgerRow, PartyContact, PartyRow, PartyStore } from './party-store';
 import type { Principal } from '../../../common/auth/principal';
@@ -30,8 +30,9 @@ export function contactData(input: {
 }
 
 /**
- * Party commands shared by customers and vendors (F-25, F-26): create, update [V], archive and
- * restore. Archiving needs a zero balance (Q33: `BALANCE_NOT_ZERO`); nothing is ever deleted (D-12).
+ * Party commands shared by customers and vendors (F-25, F-26): create, update [V], archive, restore
+ * and delete. Archiving needs a zero balance (Q33: `BALANCE_NOT_ZERO`). Bills and khata entries are
+ * never deleted (D-12), so only a party with neither can be (D-28: `HAS_HISTORY`).
  */
 @Injectable()
 export class PartyCommands {
@@ -107,6 +108,31 @@ export class PartyCommands {
           },
         );
         return updated;
+      }),
+    );
+  }
+
+  /** Removes the row for good; the version read here guards against an entry landing in between. */
+  delete<Row extends PartyRow, Data, Entry extends LedgerRow>(
+    store: PartyStore<Row, Data, Entry>,
+    id: string,
+    viewer: Principal,
+  ): Promise<boolean> {
+    return mapPartyErrors(store.kind, 'CONFLICT', () =>
+      this.uow.run(async () => {
+        const row = await store.findById(id);
+        if (row === null) {
+          throw new AppError('NOT_FOUND', `This ${store.kind} does not exist.`);
+        }
+        if (await store.hasHistory(id)) {
+          throw partyHasHistory(store.kind);
+        }
+        await refuseIfReferenced(store.kind, () => store.delete(id, row.version));
+        await this.audit.record(`${store.kind}.deleted`, viewer.userId, {
+          entityType: store.kind,
+          entityId: id,
+        });
+        return true;
       }),
     );
   }

@@ -13,6 +13,18 @@ import type { DiscountType, OrderStatus, PaymentMethod, SaleUnit } from '@pos/co
 
 /** Shapes only; validation is in `@pos/validation` (sales.schemas.ts). */
 @InputType()
+export class DiscountInput {
+  @Field(() => DiscountTypeEnum)
+  type!: DiscountType;
+
+  @Field(() => MoneyScalar, { nullable: true, description: 'FLAT only.' })
+  amount?: string | null;
+
+  @Field(() => PercentScalar, { nullable: true, description: 'PERCENT only.' })
+  percent?: string | null;
+}
+
+@InputType()
 export class SaleLineInput {
   @Field(() => ID)
   productId!: string;
@@ -22,6 +34,9 @@ export class SaleLineInput {
 
   @Field(() => Int)
   quantity!: number;
+
+  @Field(() => DiscountInput, { nullable: true, description: 'On this item alone (D-27).' })
+  discount?: DiscountInput | null;
 }
 
 @InputType()
@@ -40,18 +55,9 @@ export class CustomSaleLineInput {
 
   @Field(() => PercentScalar)
   taxRate!: string;
-}
 
-@InputType()
-export class DiscountInput {
-  @Field(() => DiscountTypeEnum)
-  type!: DiscountType;
-
-  @Field(() => MoneyScalar, { nullable: true, description: 'FLAT only.' })
-  amount?: string | null;
-
-  @Field(() => PercentScalar, { nullable: true, description: 'PERCENT only.' })
-  percent?: string | null;
+  @Field(() => DiscountInput, { nullable: true, description: 'On this item alone (D-27).' })
+  discount?: DiscountInput | null;
 }
 
 @InputType()

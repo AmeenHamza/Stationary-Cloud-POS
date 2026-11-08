@@ -5,7 +5,7 @@
  * catalog.spec uses stock, realtime.spec uses owner and watcher, khata.spec uses ledger and till,
  * billing.spec uses pricer, counter and counter2, refunds.spec uses refunder and auditor,
  * dashboard.spec uses overseer and seller (network.spec reuses their sessions), import.spec uses importer,
- * ai.spec uses advisor.
+ * ai.spec uses advisor, counter-tools.spec and delete.spec reuse the sessions of pricer and counter.
  * The `login-ip` limit (30 per IP per 15 minutes) covers the whole suite, so specs that are not about
  * logging in use `signInOnce`: one form sign-in per user per run, then the same session.
  */

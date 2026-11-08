@@ -80,6 +80,13 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       };
     case 'setDiscount':
       return { ...state, discount: action.discount };
+    case 'setLineDiscount':
+      return {
+        ...state,
+        lines: state.lines.map((line) =>
+          same(line, action.productId, action.unit) ? { ...line, discount: action.discount } : line,
+        ),
+      };
     case 'setBillGst':
       return { ...state, billGst: action.billGst };
     case 'setPaymentMethod':

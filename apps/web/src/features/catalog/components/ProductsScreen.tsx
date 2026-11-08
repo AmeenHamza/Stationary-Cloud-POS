@@ -101,6 +101,7 @@ export function ProductsScreen({
         open={actions.open}
         onClose={actions.close}
         archiveToggle={actions.archiveToggle}
+        deletion={actions.deletion}
         defaultCategoryId={categoryId}
       />
     </>

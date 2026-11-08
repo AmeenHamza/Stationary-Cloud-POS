@@ -1,10 +1,9 @@
-import { expect, type Browser, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Locator, type Page } from '@playwright/test';
 
 import { signInOnce } from './auth.fixture.js';
 import { graphqlAsPage } from './catalog.fixture.js';
 import { liveChannel } from './realtime.fixture.js';
-
-import type { E2eUser } from './users.js';
+import { E2E_USERS, type E2eUser } from './users.js';
 
 /** Counts `window.print()` calls instead of opening the print dialog (TESTING.md E2E-02). */
 const PRINT_STUB = `
@@ -32,6 +31,24 @@ export async function openAs(
   return page;
 }
 
+/**
+ * One admin page and one counter page for a whole spec file: each page load opens a socket, and the
+ * suite shares `ws-connect` (30 per minute per IP). The pages exist once `beforeAll` has run, so tests
+ * read them from the returned object.
+ */
+export function useSharedPages(): { admin: Page; counter: Page } {
+  const pages = {} as { admin: Page; counter: Page };
+  test.beforeAll(async ({ browser }) => {
+    pages.admin = await openAs(browser, E2E_USERS.pricer, '/dashboard');
+    pages.counter = await openAs(browser, E2E_USERS.counter, '/terminal');
+  });
+  test.afterAll(async () => {
+    await pages.admin.context().close();
+    await pages.counter.context().close();
+  });
+  return pages;
+}
+
 export function printCount(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __prints: number }).__prints);
 }
@@ -48,6 +65,19 @@ export async function addByName(page: Page, name: string): Promise<void> {
   await search.fill(name);
   await search.press('Enter');
   await page.getByRole('button', { name: `Add ${name}`, exact: true }).click();
+}
+
+/**
+ * A barcode scanner: the whole code and Enter with no pause. A test's separate fill and press can
+ * outlast the search box's typing delay on a busy machine, which a real scanner never does.
+ */
+export async function scanBarcode(page: Page, code: string): Promise<void> {
+  await page.getByLabel('Search by name or scan barcode').evaluate((element, value) => {
+    const input = element as HTMLInputElement;
+    Reflect.set(HTMLInputElement.prototype, 'value', value, input); // the setter React listens past
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.form?.requestSubmit();
+  }, code);
 }
 
 /** Opens Payment from the cart and returns the dialog. */

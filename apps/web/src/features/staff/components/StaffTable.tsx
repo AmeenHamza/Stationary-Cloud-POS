@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyRoundIcon, PencilIcon, PowerIcon } from 'lucide-react';
+import { KeyRoundIcon, PencilIcon, PowerIcon, Trash2Icon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,54 @@ export interface StaffActions {
   onEdit: (member: StaffMember) => void;
   onResetPassword: (member: StaffMember) => void;
   onToggleStatus: (member: StaffMember) => void;
+  onDelete: (member: StaffMember) => void;
+}
+
+function StaffRowActions({ member, actions }: { member: StaffMember; actions: StaffActions }) {
+  const active = member.status === 'ACTIVE';
+  return (
+    <div className="flex justify-end gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          actions.onEdit(member);
+        }}
+      >
+        <PencilIcon /> Edit
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          actions.onResetPassword(member);
+        }}
+      >
+        <KeyRoundIcon /> Reset password
+      </Button>
+      <Button
+        variant={active ? 'outline' : 'secondary'}
+        size="sm"
+        className={active ? 'text-destructive hover:text-destructive' : ''}
+        onClick={() => {
+          actions.onToggleStatus(member);
+        }}
+      >
+        <PowerIcon /> {active ? 'Disable' : 'Enable'}
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive"
+        aria-label={`Delete ${member.fullName}`}
+        onClick={() => {
+          actions.onDelete(member);
+        }}
+      >
+        <Trash2Icon />
+      </Button>
+    </div>
+  );
 }
 
 /** One page of staff accounts with row actions (F-31). */
@@ -60,36 +108,7 @@ export function StaffTable({
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      actions.onEdit(member);
-                    }}
-                  >
-                    <PencilIcon /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      actions.onResetPassword(member);
-                    }}
-                  >
-                    <KeyRoundIcon /> Reset password
-                  </Button>
-                  <Button
-                    variant={active ? 'outline' : 'secondary'}
-                    size="sm"
-                    className={active ? 'text-destructive hover:text-destructive' : ''}
-                    onClick={() => {
-                      actions.onToggleStatus(member);
-                    }}
-                  >
-                    <PowerIcon /> {active ? 'Disable' : 'Enable'}
-                  </Button>
-                </div>
+                <StaffRowActions member={member} actions={actions} />
               </TableCell>
             </TableRow>
           );

@@ -1,5 +1,7 @@
+import { Fragment } from 'react';
+
 import { DEFAULT_BUSINESS_TIMEZONE } from '@pos/contracts';
-import { formatDateTime, formatRs } from '@pos/domain';
+import { formatDateTime, formatRs, money } from '@pos/domain';
 
 import { PAYMENT_METHOD_LABEL } from '@/components/ledger/khata-labels';
 
@@ -78,6 +80,7 @@ function ReceiptBarcode({ value }: { value: string }) {
 /** Image-matched 80mm receipt layout using server-calculated amounts only. */
 export function ReceiptBody({ receipt }: { receipt: Receipt }) {
   const when = formatDateTime(new Date(receipt.createdAt), DEFAULT_BUSINESS_TIMEZONE);
+  const overallDiscount = money(receipt.discountTotal).minus(receipt.itemDiscountTotal);
   return (
     <div className="receipt" data-receipt={receipt.billNumber}>
       <HeaderMeta when={when} />
@@ -87,6 +90,7 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
       <DetailRow label="Invoice No." value={receipt.billNumber} />
       <DetailRow label="Date & Time" value={when} />
       <DetailRow label="Cashier" value={receipt.cashierName} />
+      {receipt.customerName !== null && <DetailRow label="Customer" value={receipt.customerName} />}
       <hr />
       <table className="receipt-table" aria-label="Bill items">
         <thead>
@@ -99,19 +103,31 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
         </thead>
         <tbody>
           {receipt.lines.map((line, index) => (
-            <tr key={index}>
-              <td className="receipt-item-name">{line.name}</td>
-              <td className="receipt-item-qty">{line.quantity}</td>
-              <td className="receipt-item-price">{formatRs(line.unitPrice)}</td>
-              <td className="receipt-item-total">{formatRs(line.lineTotal)}</td>
-            </tr>
+            <Fragment key={index}>
+              <tr>
+                <td className="receipt-item-name">{line.name}</td>
+                <td className="receipt-item-qty">{line.quantity}</td>
+                <td className="receipt-item-price">{formatRs(line.unitPrice)}</td>
+                <td className="receipt-item-total">{formatRs(line.lineTotal)}</td>
+              </tr>
+              {line.itemDiscount !== '0.00' && (
+                <tr>
+                  <td className="receipt-item-discount" colSpan={4}>
+                    Item discount -{formatRs(line.itemDiscount)}
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
       <hr />
       <DetailRow label="Subtotal" value={formatRs(receipt.subtotal)} />
-      {receipt.discountTotal !== '0.00' && (
-        <DetailRow label="Discount" value={`-${formatRs(receipt.discountTotal)}`} />
+      {receipt.itemDiscountTotal !== '0.00' && (
+        <DetailRow label="Item discount" value={`-${formatRs(receipt.itemDiscountTotal)}`} />
+      )}
+      {!overallDiscount.isZero() && (
+        <DetailRow label="Discount" value={`-${formatRs(overallDiscount)}`} />
       )}
       {receipt.productTaxTotal !== '0.00' && (
         <DetailRow label="Product tax" value={formatRs(receipt.productTaxTotal)} />
@@ -127,6 +143,9 @@ export function ReceiptBody({ receipt }: { receipt: Receipt }) {
         <span>{formatRs(receipt.total)}</span>
       </div>
       <DetailRow label="Payment Method" value={PAYMENT_METHOD_LABEL[receipt.paymentMethod]} />
+      {receipt.customerBalance !== null && (
+        <DetailRow label="Balance after this bill" value={formatRs(receipt.customerBalance)} />
+      )}
       <ReceiptBarcode value={receipt.billNumber} />
       <div className="receipt-barcode-text">{receipt.billNumber}</div>
       {receipt.footer !== null && <div className="receipt-footer">{receipt.footer}</div>}

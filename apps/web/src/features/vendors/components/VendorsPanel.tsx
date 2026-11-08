@@ -14,6 +14,7 @@ import {
   VendorKpisDocument,
   VendorsDocument,
 } from '../graphql/vendors.documents';
+import { useDeleteVendor } from '../hooks/useDeleteVendor';
 import { VENDOR_BALANCE_LABELS, vendorSummary } from '../vendor-labels';
 
 /**
@@ -32,6 +33,7 @@ export function VendorsPanel({
   const { data, error } = useQuery(VendorsDocument, { variables: list.variables });
   const { data: kpis } = useQuery(VendorKpisDocument, showKpis ? undefined : skipToken);
   const [create] = useMutation(CreateVendorDocument, { refetchQueries: ['Vendors'] });
+  const deletable = useDeleteVendor(showKpis);
   const connection = data?.vendors;
   return (
     <>
@@ -53,6 +55,7 @@ export function VendorsPanel({
       />
       <PartyListView
         {...list.view}
+        {...deletable}
         noun="vendor"
         detailHeading="Products"
         connection={connection && { ...connection, nodes: connection.nodes.map(vendorSummary) }}

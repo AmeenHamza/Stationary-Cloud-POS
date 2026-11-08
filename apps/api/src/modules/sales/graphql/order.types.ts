@@ -52,8 +52,11 @@ export class Order {
   @Field(() => MoneyScalar)
   subtotal!: DecimalLike;
 
-  @Field(() => MoneyScalar)
+  @Field(() => MoneyScalar, { description: 'Every discount: item discounts plus the overall one.' })
   discountTotal!: DecimalLike;
+
+  @Field(() => MoneyScalar, { description: 'The part of discountTotal given on items (D-27).' })
+  itemDiscountTotal!: DecimalLike;
 
   @Field(() => MoneyScalar)
   productTaxTotal!: DecimalLike;
@@ -118,7 +121,10 @@ export class OrderLine {
   @Field(() => MoneyScalar)
   lineGross!: DecimalLike;
 
-  @Field(() => MoneyScalar)
+  @Field(() => MoneyScalar, { description: "This item's own discount (D-27)." })
+  itemDiscount!: DecimalLike;
+
+  @Field(() => MoneyScalar, { description: 'The item discount plus its share of the overall one.' })
   lineDiscount!: DecimalLike;
 
   @Field(() => MoneyScalar)

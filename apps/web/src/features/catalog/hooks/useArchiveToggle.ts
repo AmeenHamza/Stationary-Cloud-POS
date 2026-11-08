@@ -11,8 +11,8 @@ import { ArchiveProductDocument, RestoreProductDocument } from '../graphql/produ
 import type { CatalogProduct } from '../product';
 
 /**
- * Archive or restore with a confirmation step (Q16b: products are never deleted, because orders and
- * the stock ledger reference them). Restoring fails if another active product took the barcode.
+ * Archive or restore with a confirmation step (Q16b: a product on past bills can only be archived,
+ * D-28). Restoring fails if another active product took the barcode.
  */
 export function useArchiveToggle() {
   const [target, setTarget] = useState<CatalogProduct | null>(null);

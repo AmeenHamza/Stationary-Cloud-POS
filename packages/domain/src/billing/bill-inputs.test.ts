@@ -2,7 +2,24 @@ import { describe, expect, it } from 'vitest';
 
 import { DomainRuleError } from '../errors.js';
 
-import { billDiscountOf, billGstOf } from './bill-inputs.js';
+import { billDiscountOf, billGstOf, lineDiscountOf } from './bill-inputs.js';
+
+describe('lineDiscountOf (one item, D-27)', () => {
+  it('reads no entry as no discount and parses the value matching the type', () => {
+    expect(lineDiscountOf(null)).toEqual({ type: 'NONE' });
+    expect(lineDiscountOf(undefined)).toEqual({ type: 'NONE' });
+    expect(lineDiscountOf({ type: 'NONE' })).toEqual({ type: 'NONE' });
+    const flat = lineDiscountOf({ type: 'FLAT', amount: '50' });
+    expect(flat.type === 'FLAT' && flat.amount.toString()).toBe('50');
+    const percentage = lineDiscountOf({ type: 'PERCENT', percent: '10' });
+    expect(percentage.type === 'PERCENT' && percentage.percent.toString()).toBe('10');
+  });
+
+  it('names the item discount when the value is missing', () => {
+    expect(() => lineDiscountOf({ type: 'FLAT' })).toThrow(/^Item discount/);
+    expect(() => lineDiscountOf({ type: 'PERCENT', percent: '' })).toThrow(/^Item discount/);
+  });
+});
 
 describe('bill entries (shared by the API and the cart preview)', () => {
   it('reads the value that matches the discount type', () => {

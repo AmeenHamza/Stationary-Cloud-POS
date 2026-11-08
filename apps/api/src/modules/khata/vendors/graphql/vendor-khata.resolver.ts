@@ -63,4 +63,13 @@ export class VendorKhataResolver {
   ): Promise<types.Vendor> {
     return this.service.restore(id, viewer);
   }
+
+  @Mutation(() => Boolean, { description: 'Only with no entries (HAS_HISTORY, D-28).' })
+  @RequirePermission('vendors:archive')
+  deleteVendor(
+    @Args('id', { type: () => ID }, new ZodValidationPipe(schemas.idSchema)) id: string,
+    @CurrentViewer() viewer: Principal,
+  ): Promise<boolean> {
+    return this.service.delete(id, viewer);
+  }
 }

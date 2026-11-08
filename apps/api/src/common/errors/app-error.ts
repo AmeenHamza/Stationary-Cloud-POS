@@ -36,6 +36,7 @@ export function httpStatusFor(code: ErrorCode): number {
     case 'QUOTE_MISMATCH':
     case 'REFUND_EXCEEDS_REMAINING':
     case 'BALANCE_NOT_ZERO':
+    case 'HAS_HISTORY':
     case 'LAST_ADMIN':
       return 409;
     default:

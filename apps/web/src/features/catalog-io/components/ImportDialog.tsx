@@ -19,9 +19,9 @@ import { uploadImport } from '../lib/upload-import';
 import { ImportProgress } from './ImportProgress';
 
 /**
- * Import products from a template or legacy file (F-11, Q14): rows are matched by barcode (updated if found,
- * added if not; stock only for new products), and refused rows are listed in a report. The work
- * continues on the server if this dialog is closed.
+ * Import products from a template or legacy file (F-11, Q14, D-29): missing categories are created
+ * first, rows are matched by barcode (updated if found, added if not; stock only for new products),
+ * and refused rows are listed in a report. The work continues on the server if this dialog is closed.
  */
 export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -59,8 +59,9 @@ export function ImportDialog({ open, onClose }: { open: boolean; onClose: () => 
           <DialogTitle>Import products</DialogTitle>
           <DialogDescription>
             An .xlsx or .csv file using template or supported legacy headers, up to 5,000 rows and 5
-            MB. Existing product stock is not changed. Keep barcodes as text to preserve leading
-            zeros.
+            MB. Categories in the file are created first if they do not exist, and each product goes
+            into its category. Existing product stock is not changed. Keep barcodes as text to
+            preserve leading zeros.
           </DialogDescription>
         </DialogHeader>
         {jobId === null ? (

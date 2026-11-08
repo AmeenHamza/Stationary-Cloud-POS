@@ -67,6 +67,10 @@ export abstract class PartyService<Row extends PartyRow, Data, Entry extends Led
     return this.commands.setArchived(this.store, id, false, viewer);
   }
 
+  delete(id: string, viewer: Principal): Promise<boolean> {
+    return this.commands.delete(this.store, id, viewer);
+  }
+
   /** A manual khata entry [K] on an active party; the request hash covers the whole input. */
   protected postManual(
     partyId: string,

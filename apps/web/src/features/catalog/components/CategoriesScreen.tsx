@@ -4,7 +4,7 @@ import { useQuery } from '@apollo/client/react';
 import { PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
+import { DeleteConfirm } from '@/components/feedback/DeleteConfirm';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useCursorPages } from '@/hooks/useCursorPages';
@@ -60,7 +60,7 @@ export function CategoriesScreen() {
           onEdit: (category) => {
             setDialog({ kind: 'category', category });
           },
-          onDelete: deletion.ask,
+          onDelete: deletion.control.ask,
         }}
       />
       {dialog?.kind === 'category' && (
@@ -73,18 +73,7 @@ export function CategoriesScreen() {
           onOpenChange={close}
         />
       )}
-      <ConfirmDialog
-        open={deletion.target !== null}
-        title={deletion.title}
-        description={deletion.description}
-        confirmLabel="Delete"
-        destructive
-        busy={deletion.busy}
-        onConfirm={() => void deletion.confirm()}
-        onOpenChange={(open) => {
-          if (!open) deletion.cancel();
-        }}
-      />
+      <DeleteConfirm control={deletion.control} description={deletion.description} />
     </>
   );
 }

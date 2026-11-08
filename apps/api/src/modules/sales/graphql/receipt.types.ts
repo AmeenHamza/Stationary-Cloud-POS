@@ -35,6 +35,9 @@ export class ReceiptLine {
 
   @Field(() => MoneyScalar, { description: 'Quantity × unit price, before discount and tax.' })
   lineTotal!: DecimalLike;
+
+  @Field(() => MoneyScalar, { description: "This item's own discount (D-27)." })
+  itemDiscount!: DecimalLike;
 }
 
 /** Everything an 80 mm receipt prints (SYSTEM_DESIGN.md §3.5, Q6b), with no further request. */
@@ -93,6 +96,9 @@ export class Receipt {
 
   @Field(() => MoneyScalar)
   discountTotal!: DecimalLike;
+
+  @Field(() => MoneyScalar, { description: 'The part of discountTotal given on items (D-27).' })
+  itemDiscountTotal!: DecimalLike;
 
   @Field(() => MoneyScalar)
   productTaxTotal!: DecimalLike;

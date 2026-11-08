@@ -14,6 +14,7 @@ export const OrderFieldsFragment = graphql(`
     discountType
     discountValue
     discountTotal
+    itemDiscountTotal
     productTaxTotal
     billGstRate
     billGstAmount
@@ -39,6 +40,7 @@ export const OrderRowFieldsFragment = graphql(`
     discountType
     discountValue
     discountTotal
+    itemDiscountTotal
     billGstAmount
     total
     refundedTotal
@@ -80,9 +82,11 @@ export const ReceiptFieldsFragment = graphql(`
       unit
       unitPrice
       lineTotal
+      itemDiscount
     }
     subtotal
     discountTotal
+    itemDiscountTotal
     productTaxTotal
     billGstRate
     billGstAmount

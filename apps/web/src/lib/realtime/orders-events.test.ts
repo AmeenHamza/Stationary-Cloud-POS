@@ -67,6 +67,7 @@ describe('order events (API.md §7.2, SYSTEM_DESIGN.md §5.9)', () => {
       discountType: 'NONE' as const,
       discountValue: '0.00',
       discountTotal: '0.00',
+      itemDiscountTotal: '0.00',
       billGstAmount: '0.00',
       total: '120.00',
     };

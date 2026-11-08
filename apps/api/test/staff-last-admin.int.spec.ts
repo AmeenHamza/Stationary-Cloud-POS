@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { querySql } from '@pos/testkit';
-
 import { createUser, loginCookie } from './support/auth';
 import { errorCode } from './support/graphql-client';
 import { startHarness } from './support/harness';
-import { asUser, SET_STATUS, UPDATE_STAFF } from './support/staff';
+import { asUser, expectOneAdminLeft, SET_STATUS, UPDATE_STAFF } from './support/staff';
 
 describe('last active admin (DATABASE.md §4.1)', () => {
   it('cannot be disabled or demoted', async () => {
@@ -39,17 +37,7 @@ describe('last active admin (DATABASE.md §4.1)', () => {
         asUser(pair.url, cookieA, SET_STATUS, { input: { id: b.id, status: 'DISABLED' } }),
         asUser(pair.url, cookieB, SET_STATUS, { input: { id: a.id, status: 'DISABLED' } }),
       ]);
-      const codes = results.map((r) => errorCode(r) ?? 'OK');
-      expect(codes.filter((code) => code === 'OK')).toHaveLength(1);
-      // The loser sees LAST_ADMIN, or UNAUTHENTICATED if the winner's commit already signed them out.
-      expect(codes.filter((code) => code !== 'OK')).toEqual([
-        expect.stringMatching(/^(LAST_ADMIN|UNAUTHENTICATED)$/),
-      ]);
-      const [row] = await querySql<{ n: string }>(
-        pair.db.url,
-        "SELECT count(*)::text AS n FROM users WHERE role = 'ADMIN' AND status = 'ACTIVE'",
-      );
-      expect(row?.n).toBe('1');
+      await expectOneAdminLeft(pair.db.url, results);
     } finally {
       await pair.stop();
     }

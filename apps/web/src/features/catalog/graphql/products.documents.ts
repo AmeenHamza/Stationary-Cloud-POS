@@ -77,3 +77,9 @@ export const RestoreProductDocument = graphql(`
     }
   }
 `);
+
+export const DeleteProductDocument = graphql(`
+  mutation DeleteProduct($id: ID!) {
+    deleteProduct(id: $id)
+  }
+`);

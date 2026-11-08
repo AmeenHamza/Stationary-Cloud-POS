@@ -71,6 +71,22 @@ describe('cart reducer (SYSTEM_DESIGN.md §3.1)', () => {
     ]);
     expect(cartReducer(udhaar, { type: 'clear' })).toBe(EMPTY_CART);
   });
+
+  it('sets a discount on one line of a product, and it goes with the line (D-27)', () => {
+    const discount = { type: 'FLAT' as const, amount: '5', percent: '' };
+    const cart = run(
+      { type: 'add', productId: P1, unit: 'PIECE' },
+      { type: 'add', productId: P1, unit: 'BOX' },
+      { type: 'setLineDiscount', productId: P1, unit: 'BOX', discount },
+    );
+    expect(cart.lines).toEqual([
+      { productId: P1, unit: 'PIECE', quantity: 1 },
+      { productId: P1, unit: 'BOX', quantity: 1, discount },
+    ]);
+    expect(cartReducer(cart, { type: 'remove', productId: P1, unit: 'BOX' }).lines).toEqual([
+      { productId: P1, unit: 'PIECE', quantity: 1 },
+    ]);
+  });
 });
 
 describe('restoreCart (a saved cart from this browser)', () => {
@@ -94,6 +110,45 @@ describe('restoreCart (a saved cart from this browser)', () => {
       paymentMethod: 'UDHAAR',
       customer: { id: P2, name: 'Ali' },
     });
+  });
+
+  it('keeps item discounts, and a half-typed one never costs the line (D-27)', () => {
+    const restored = restoreCart({
+      lines: [
+        { productId: P1, unit: 'PIECE', quantity: 2, discount: { type: 'FLAT', amount: '' } },
+        { productId: P2, unit: 'PIECE', quantity: 1, discount: { type: 'NONE' } },
+      ],
+      customLines: [
+        {
+          name: 'Binding',
+          unit: 'PIECE',
+          quantity: 1,
+          unitPrice: '100',
+          taxRate: '0',
+          discount: { type: 'PERCENT', percent: '1' },
+        },
+      ],
+    });
+    expect(restored.lines).toEqual([
+      {
+        productId: P1,
+        unit: 'PIECE',
+        quantity: 2,
+        discount: { type: 'FLAT', amount: '', percent: '' },
+      },
+      { productId: P2, unit: 'PIECE', quantity: 1 },
+    ]);
+    expect(restored.customLines).toEqual([
+      {
+        id: 'custom-0',
+        name: 'Binding',
+        unit: 'PIECE',
+        quantity: 1,
+        unitPrice: '100',
+        taxRate: '0',
+        discount: { type: 'PERCENT', amount: '', percent: '1' },
+      },
+    ]);
   });
 
   it('falls back to an empty cart for anything else', () => {

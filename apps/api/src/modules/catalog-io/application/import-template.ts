@@ -9,7 +9,7 @@ const EXAMPLE: Readonly<Record<(typeof IMPORT_COLUMNS)[number]['field'], string 
   barcode: '8960000000000',
   name: 'Ball pen, blue',
   nameUrdu: '',
-  categoryName: '',
+  categoryName: 'Pens',
   baseUnitLabel: 'Piece',
   piecesPerBox: 12,
   salePrice: '30.00',
@@ -23,7 +23,7 @@ const EXAMPLE: Readonly<Record<(typeof IMPORT_COLUMNS)[number]['field'], string 
 
 /**
  * The import template (F-11, Q14): the headers the parser expects and one example row. Blank
- * Category means Uncategorised; a category that does not exist fails its row (Q37).
+ * Category means Uncategorised; a category that does not exist yet is created (D-29).
  */
 export async function writeTemplate(out: Writable): Promise<void> {
   const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: out, useStyles: false });

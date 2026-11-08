@@ -1,6 +1,7 @@
 'use client';
 
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
+import { DeleteConfirm } from '@/components/feedback/DeleteConfirm';
 
 import { AdjustStockDialog } from './AdjustStockDialog';
 import { CloneProductDialog } from './CloneProductDialog';
@@ -8,28 +9,31 @@ import { ProductFormDialog } from './ProductFormDialog';
 import { RestockDialog } from './RestockDialog';
 
 import type { useArchiveToggle } from '../hooks/useArchiveToggle';
+import type { useDeleteProduct } from '../hooks/useDeleteProduct';
 import type { CatalogProduct } from '../product';
 import type { ProductAction } from './ProductRowActions';
 
 /** Which product dialog is open; `create` has no product yet. */
 export type OpenDialog =
   | { kind: 'create' }
-  | { kind: Exclude<ProductAction, 'archive' | 'restore'>; product: CatalogProduct }
+  | { kind: Exclude<ProductAction, 'archive' | 'restore' | 'delete'>; product: CatalogProduct }
   | null;
 
 /**
- * The dialogs of the product screens: add/edit, clone, restock, adjust, and the archive/restore
- * confirmation. Opening one replaces any other.
+ * The dialogs of the product screens: add/edit, clone, restock, adjust, and the archive/restore and
+ * delete confirmations. Opening one replaces any other.
  */
 export function ProductDialogs({
   open,
   onClose,
   archiveToggle,
+  deletion,
   defaultCategoryId,
 }: {
   open: OpenDialog;
   onClose: () => void;
   archiveToggle: ReturnType<typeof useArchiveToggle>;
+  deletion: ReturnType<typeof useDeleteProduct>;
   defaultCategoryId: string | null;
 }) {
   const close = (isOpen: boolean): void => {
@@ -67,6 +71,10 @@ export function ProductDialogs({
         onOpenChange={(isOpen) => {
           if (!isOpen) toggle.cancel();
         }}
+      />
+      <DeleteConfirm
+        control={deletion}
+        description="This removes the product and its stock history from the database for good. A product on past bills cannot be deleted: archive it instead."
       />
     </>
   );

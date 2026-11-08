@@ -49,7 +49,7 @@ export const ADJUSTMENT_DIRECTIONS = ['INCREASE', 'DECREASE'] as const;
 export type AdjustmentDirection = (typeof ADJUSTMENT_DIRECTIONS)[number];
 
 /** `change` field of `product.changed` and `category.changed` events (API.md §7.2). */
-export const PRODUCT_CHANGES = ['CREATED', 'UPDATED', 'ARCHIVED', 'RESTORED'] as const;
+export const PRODUCT_CHANGES = ['CREATED', 'UPDATED', 'ARCHIVED', 'RESTORED', 'DELETED'] as const;
 export type ProductChange = (typeof PRODUCT_CHANGES)[number];
 
 export const CATEGORY_CHANGES = ['CREATED', 'UPDATED', 'DELETED'] as const;

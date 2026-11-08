@@ -8,6 +8,13 @@ import {
 } from './reporting.schemas.js';
 
 describe('product import rows (F-11, Q37)', () => {
+  it('reads a category name up to the length a category may have (D-29)', () => {
+    const row = (categoryName: string) =>
+      productImportRowSchema.safeParse({ name: 'Pen', salePrice: '10', categoryName });
+    expect(row('a'.repeat(80)).success).toBe(true);
+    expect(row('a'.repeat(81)).success).toBe(false);
+  });
+
   it('fills documented defaults for blank optional cells', () => {
     expect(productImportRowSchema.parse({ name: 'Pen', salePrice: '10', barcode: ' ' })).toEqual({
       barcode: null,

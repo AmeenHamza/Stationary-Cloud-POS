@@ -8,6 +8,7 @@ import { ZodValidationPipe } from '../../../../common/validation/zod-validation.
 import { ArchiveProductService } from '../application/archive-product.service';
 import { CloneProductService } from '../application/clone-product.service';
 import { CreateProductService } from '../application/create-product.service';
+import { DeleteProductService } from '../application/delete-product.service';
 import { UpdateProductService } from '../application/update-product.service';
 
 import * as inputs from './product.inputs';
@@ -25,6 +26,7 @@ export class ProductCommandsResolver {
     private readonly updater: UpdateProductService,
     private readonly cloner: CloneProductService,
     private readonly archiver: ArchiveProductService,
+    private readonly deleter: DeleteProductService,
   ) {}
 
   @Mutation(() => Product)
@@ -80,5 +82,13 @@ export class ProductCommandsResolver {
     @CurrentViewer() viewer: Principal,
   ): Promise<ProductView> {
     return this.archiver.restore(id, viewer);
+  }
+
+  @Mutation(() => Boolean, { description: 'Only if no bill sold it (HAS_HISTORY, D-28).' })
+  deleteProduct(
+    @Args('id', { type: () => ID }, new ZodValidationPipe(schemas.idSchema)) id: string,
+    @CurrentViewer() viewer: Principal,
+  ): Promise<boolean> {
+    return this.deleter.execute(id, viewer);
   }
 }

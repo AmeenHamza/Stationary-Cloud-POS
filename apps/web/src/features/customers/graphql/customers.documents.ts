@@ -44,6 +44,7 @@ export const CustomerLedgerDocument = graphql(`
         paymentMethod
         note
         orderId
+        billNumber
         businessDate
         createdAt
       }
@@ -100,5 +101,11 @@ export const RestoreCustomerDocument = graphql(`
     restoreCustomer(id: $id) {
       ...CustomerFields
     }
+  }
+`);
+
+export const DeleteCustomerDocument = graphql(`
+  mutation DeleteCustomer($id: ID!) {
+    deleteCustomer(id: $id)
   }
 `);

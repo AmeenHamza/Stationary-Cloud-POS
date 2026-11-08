@@ -20,15 +20,20 @@ export interface BillGstEntry {
  * Parses the discount entry for `calculateBill`. The API and the cart preview share it, so both read
  * the same entry the same way; a missing or malformed value throws `DomainRuleError`.
  */
-export function billDiscountOf(entry: DiscountEntry): BillDiscount {
+export function billDiscountOf(entry: DiscountEntry, label = 'Discount'): BillDiscount {
   switch (entry.type) {
     case 'FLAT':
-      return { type: 'FLAT', amount: money(entry.amount ?? '', 'Discount') };
+      return { type: 'FLAT', amount: money(entry.amount ?? '', label) };
     case 'PERCENT':
-      return { type: 'PERCENT', percent: percent(entry.percent ?? '', 'Discount') };
+      return { type: 'PERCENT', percent: percent(entry.percent ?? '', label) };
     case 'NONE':
       return { type: 'NONE' };
   }
+}
+
+/** Parses one item's discount entry (D-27); no entry means no discount. */
+export function lineDiscountOf(entry: DiscountEntry | null | undefined): BillDiscount {
+  return billDiscountOf(entry ?? { type: 'NONE' }, 'Item discount');
 }
 
 /** Parses the Bill GST entry for `calculateBill` (D-25). */

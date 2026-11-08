@@ -44,6 +44,16 @@ export class ProductEvents {
     await this.outbox.add('product.changed', 'staff', fits ? full : { ...full, product: null });
   }
 
+  /** A deleted product has no snapshot: clients evict it, and cached lists drop it (D-28). */
+  async deleted(productId: string, version: number): Promise<void> {
+    await this.outbox.add('product.changed', 'staff', {
+      change: 'DELETED',
+      productId,
+      version,
+      product: null,
+    });
+  }
+
   /** One event for all products of one transaction (≤ 100 lines, ≤ 1 KB per API.md §7.2). */
   async stockChanged(
     views: readonly Pick<ProductView, 'id' | 'stockPieces' | 'isLowStock' | 'version'>[],

@@ -3,7 +3,7 @@ import { customSaleLineInputSchema, saleLineInputSchema } from '@pos/validation'
 
 import { safeLocalStorage } from '@/lib/storage/safe-local-storage';
 
-import { EMPTY_CART, type CartState } from './cart.types';
+import { EMPTY_CART, type CartDiscount, type CartState } from './cart.types';
 
 const cartKey = (userId: string): string => `pos:cart:${userId}`;
 
@@ -15,6 +15,30 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
 const oneOf = <T extends string>(options: readonly T[], value: unknown, fallback: T): T =>
   options.find((option) => option === value) ?? fallback;
 
+function discountOf(value: unknown): CartDiscount {
+  const discount = isRecord(value) ? value : {};
+  return {
+    type: oneOf(DISCOUNT_TYPES, discount['type'], 'NONE'),
+    amount: text(discount['amount']),
+    percent: text(discount['percent']),
+  };
+}
+
+/**
+ * Splits a saved line into its fields, for the API's line schema, and its discount as typed. A half
+ * typed discount is still a good draft, so it must not cost the cashier the line.
+ */
+function splitDiscount(line: unknown): { fields: unknown; own: { discount?: CartDiscount } } {
+  if (!isRecord(line)) {
+    return { fields: line, own: {} };
+  }
+  const discount = discountOf(line['discount']);
+  return {
+    fields: { ...line, discount: null },
+    own: discount.type === 'NONE' ? {} : { discount },
+  };
+}
+
 /**
  * Rebuilds a saved cart, keeping only what is still well-formed: another version of the app, or a
  * hand-edited value, must never break the terminal. Lines are checked with the API's line schema.
@@ -24,27 +48,33 @@ export function restoreCart(value: unknown): CartState {
     return EMPTY_CART;
   }
   const lines = value['lines'].flatMap((line: unknown) => {
-    const parsed = saleLineInputSchema.safeParse(line);
-    return parsed.success ? [parsed.data] : [];
+    const { fields, own } = splitDiscount(line);
+    const parsed = saleLineInputSchema.safeParse(fields);
+    if (!parsed.success) {
+      return [];
+    }
+    const { productId, unit, quantity } = parsed.data;
+    return [{ productId, unit, quantity, ...own }];
   });
   const customLines = Array.isArray(value['customLines'])
     ? value['customLines'].flatMap((line: unknown, index) => {
-        const parsed = customSaleLineInputSchema.safeParse(line);
-        return parsed.success ? [{ ...parsed.data, id: `custom-${String(index)}` }] : [];
+        const { fields, own } = splitDiscount(line);
+        const parsed = customSaleLineInputSchema.safeParse(fields);
+        if (!parsed.success) {
+          return [];
+        }
+        const { name, unit, quantity, unitPrice, taxRate } = parsed.data;
+        const id = `custom-${String(index)}`;
+        return [{ id, name, unit, quantity, unitPrice, taxRate, ...own }];
       })
     : [];
-  const discount = isRecord(value['discount']) ? value['discount'] : {};
   const billGst = isRecord(value['billGst']) ? value['billGst'] : {};
   const customer = isRecord(value['customer']) ? value['customer'] : null;
   const paymentMethod = oneOf(PAYMENT_METHODS, value['paymentMethod'], 'CASH');
   return {
     lines,
     customLines,
-    discount: {
-      type: oneOf(DISCOUNT_TYPES, discount['type'], 'NONE'),
-      amount: text(discount['amount']),
-      percent: text(discount['percent']),
-    },
+    discount: discountOf(value['discount']),
     billGst: {
       applied: billGst['applied'] === true,
       rate: typeof billGst['rate'] === 'string' ? billGst['rate'] : null,

@@ -1,4 +1,4 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 
 import * as schemas from '@pos/validation';
 
@@ -6,6 +6,7 @@ import { RequirePermission } from '../../../common/auth/access-policy';
 import { CurrentViewer } from '../../../common/auth/current-viewer.decorator';
 import { ZodValidationPipe } from '../../../common/validation/zod-validation.pipe';
 import { CreateStaffUserService } from '../application/create-staff-user.service';
+import { DeleteStaffUserService } from '../application/delete-staff-user.service';
 import { ResetStaffPasswordService } from '../application/reset-staff-password.service';
 import { SetStaffStatusService } from '../application/set-staff-status.service';
 import { StaffQueriesService } from '../application/staff-queries.service';
@@ -27,6 +28,7 @@ export class StaffResolver {
     private readonly updater: UpdateStaffUserService,
     private readonly statusSetter: SetStaffStatusService,
     private readonly passwordResetter: ResetStaffPasswordService,
+    private readonly deleter: DeleteStaffUserService,
   ) {}
 
   @Query(() => StaffUserConnection)
@@ -87,5 +89,13 @@ export class StaffResolver {
     @CurrentViewer() viewer: Principal,
   ): Promise<StaffUser> {
     return this.passwordResetter.execute(input, viewer);
+  }
+
+  @Mutation(() => Boolean, { description: 'Only with no work on record (HAS_HISTORY, D-28).' })
+  deleteStaffUser(
+    @Args('id', { type: () => ID }, new ZodValidationPipe(schemas.idSchema)) id: string,
+    @CurrentViewer() viewer: Principal,
+  ): Promise<boolean> {
+    return this.deleter.execute(id, viewer);
   }
 }

@@ -23,8 +23,11 @@ export function TotalsSummary({ bill }: { bill: BillResult | null }) {
   return (
     <div className="grid gap-1 rounded-lg bg-muted/50 p-3 text-sm" data-testid="payment-totals">
       <Line label="Subtotal" value={formatRs(bill.subtotal)} />
-      {!bill.discountTotal.isZero() && (
-        <Line label="Discount" value={`-${formatRs(bill.discountTotal)}`} />
+      {!bill.itemDiscountTotal.isZero() && (
+        <Line label="Item discount" value={`-${formatRs(bill.itemDiscountTotal)}`} />
+      )}
+      {!bill.billDiscountTotal.isZero() && (
+        <Line label="Discount" value={`-${formatRs(bill.billDiscountTotal)}`} />
       )}
       <Line label="Product tax" value={formatRs(bill.productTaxTotal)} />
       {bill.billGstRate !== null && (

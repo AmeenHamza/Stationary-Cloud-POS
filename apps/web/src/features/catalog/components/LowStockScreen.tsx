@@ -40,6 +40,7 @@ export function LowStockScreen({ extraActions }: { extraActions?: ReactNode }) {
         open={actions.open}
         onClose={actions.close}
         archiveToggle={actions.archiveToggle}
+        deletion={actions.deletion}
         defaultCategoryId={null}
       />
     </>

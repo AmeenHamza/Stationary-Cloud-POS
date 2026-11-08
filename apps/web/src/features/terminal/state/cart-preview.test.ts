@@ -81,7 +81,7 @@ describe('cart preview (the same calculateBill as the API, ADR-013)', () => {
       '18',
     );
     expect(flat.bill).toBeNull();
-    expect(flat.entryError).toMatch(/between 0 and the subtotal/);
+    expect(flat.entryError).toMatch(/between 0 and the bill amount/);
   });
 });
 

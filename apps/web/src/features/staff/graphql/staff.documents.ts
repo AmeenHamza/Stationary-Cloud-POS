@@ -58,3 +58,9 @@ export const ResetStaffPasswordDocument = graphql(`
     }
   }
 `);
+
+export const DeleteStaffUserDocument = graphql(`
+  mutation DeleteStaffUser($id: ID!) {
+    deleteStaffUser(id: $id)
+  }
+`);

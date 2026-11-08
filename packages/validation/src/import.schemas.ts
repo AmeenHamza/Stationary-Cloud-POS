@@ -19,7 +19,7 @@ import {
 import { pageArgsSchema } from './pagination.schemas.js';
 
 /**
- * The product import template (F-11, Q14, Q37): header → field. The first row of an upload must
+ * The product import template (F-11, Q14, D-29): header → field. The first row of an upload must
  * hold these headers (any order, case-insensitive); unknown columns are ignored.
  */
 export const IMPORT_COLUMNS = [
@@ -67,7 +67,7 @@ export const productImportRowSchema = z
     barcode: z.preprocess(blank, optionalText(64, 'Barcode')),
     name: requiredText(200, 'Name'),
     nameUrdu: z.preprocess(blank, optionalText(200, 'Urdu name')),
-    categoryName: z.preprocess(blank, optionalText(60, 'Category')),
+    categoryName: z.preprocess(blank, optionalText(80, 'Category')),
     baseUnitLabel: z.preprocess((v) => blank(v) ?? 'Piece', requiredText(20, 'Base unit')),
     piecesPerBox: wholeNumber('Pieces per box', 1, MAX_PIECES_PER_BOX, 1),
     salePrice: moneySchema,

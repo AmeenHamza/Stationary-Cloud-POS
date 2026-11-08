@@ -2,11 +2,12 @@ export * from './billing/bill.types.js';
 export {
   billDiscountOf,
   billGstOf,
+  lineDiscountOf,
   type BillGstEntry,
   type DiscountEntry,
 } from './billing/bill-inputs.js';
 export { calculateBill } from './billing/calculate-bill.js';
-export { discountTotal } from './billing/discount.js';
+export { discountTotal, itemDiscount } from './billing/discount.js';
 export { billGstAmount, lineTax } from './billing/tax.js';
 export { DomainRuleError } from './errors.js';
 export { balanceState, ledgerDelta } from './khata/ledger.js';

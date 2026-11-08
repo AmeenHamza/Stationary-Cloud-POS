@@ -81,7 +81,12 @@ export async function seedProduct(
 
 /** A `createSale` input: one PIECE line per product unless lines are given; override anything. */
 export function saleInput(
-  lines: { productId: string; quantity?: number; unit?: 'PIECE' | 'BOX' }[],
+  lines: {
+    productId: string;
+    quantity?: number;
+    unit?: 'PIECE' | 'BOX';
+    discount?: Record<string, string>;
+  }[],
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {

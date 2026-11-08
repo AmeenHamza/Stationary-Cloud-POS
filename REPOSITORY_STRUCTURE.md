@@ -128,7 +128,7 @@ apps/api/
 │   │   ├── staff/
 │   │   │   ├── staff.module.ts · index.ts
 │   │   │   ├── graphql/      staff.resolver.ts · staff-user.type.ts · staff.inputs.ts
-│   │   │   ├── application/  create-staff-user.service.ts · update-staff-user.service.ts · set-staff-status.service.ts · reset-staff-password.service.ts · staff-queries.service.ts · staff-change.ts (last-admin, version) · bootstrap-admin.service.ts (CLI)
+│   │   │   ├── application/  create-staff-user.service.ts · update-staff-user.service.ts · set-staff-status.service.ts · reset-staff-password.service.ts · delete-staff-user.service.ts · staff-queries.service.ts · staff-change.ts (last-admin, version) · bootstrap-admin.service.ts (CLI)
 │   │   │   └── persistence/  staff.repository.ts
 │   │   ├── settings/
 │   │   │   ├── settings.module.ts · index.ts
@@ -143,7 +143,7 @@ apps/api/
 │   │   │   │   └── persistence/  categories.repository.ts
 │   │   │   ├── products/
 │   │   │   │   ├── graphql/      product-queries.resolver.ts · product-commands.resolver.ts · product.type.ts · product.inputs.ts (inputs and args)
-│   │   │   │   ├── application/  create-product.service.ts · update-product.service.ts · clone-product.service.ts · archive-product.service.ts (archive + restore) · new-product-recorder.ts (opening movement, events, audit, replay) · product-queries.service.ts (incl. low stock) · product-data.ts · product-view.ts · product-events.ts
+│   │   │   │   ├── application/  create-product.service.ts · update-product.service.ts · clone-product.service.ts · archive-product.service.ts (archive + restore) · delete-product.service.ts · new-product-recorder.ts (opening movement, events, audit, replay) · product-queries.service.ts (incl. low stock) · product-data.ts · product-view.ts · product-events.ts
 │   │   │   │   └── persistence/  products.repository.ts · product-list.repository.ts (keyset lists, search, low-stock filter)
 │   │   │   └── inventory/
 │   │   │       ├── graphql/      inventory.resolver.ts · inventory.inputs.ts · stock-movement.type.ts (P-02)
@@ -204,6 +204,7 @@ apps/api/
     ├── network-budgets.int.spec.ts   # NET-01 sizes, NET-02/PAG-07 statements per list, PAG-09 every connection
     ├── khata-(customers|vendors-ledger).int.spec.ts   # Phase 8
     ├── sales-(billing|idempotency|refunds|resilience|budgets).int.spec.ts · integrity.int.spec.ts   # Phase 9: FIN-08–FIN-24, RED-01/RED-11, NET-03
+    ├── sales-item-discounts · khata-regenerate-bill · delete-(products|parties) · staff-delete · catalog-io-categories *.int.spec.ts   # Owner update 2026-11-08 (F-39–F-42)
     ├── reporting-dashboard.int.spec.ts   # Phase 10: hand-computed tiles, history, bounds, statements and bytes
     ├── catalog-io-(import|export|redis).int.spec.ts   # Phase 11: import, SEC-14, exports and batching, RED-08 (alone: one API per file)
     ├── http.int.spec.ts · unit-of-work.int.spec.ts · outbox.int.spec.ts · cache.int.spec.ts · rate-limit-pubsub.int.spec.ts   # Phase 4 infrastructure
@@ -252,25 +253,25 @@ apps/web/
     │           └── activity/page.tsx (P-01)
     ├── features/                     # one folder per feature; public API via index.ts
     │   ├── auth/       components/ (LoginForm, ViewerGate, RoleRoutes: RoleRedirect + RequireRole, AccountMenu, ChangePasswordDialog) · hooks/ (useViewer + useCan, useChangePasswordForm) · graphql/auth.documents.ts · routes.ts · index.ts
-    │   ├── catalog/    components/ (ProductsScreen, ProductFilters, ProductList, ProductTable, ProductRowActions, ProductDialogs, ProductFormDialog, ProductFormFields, CloneProductDialog, RestockDialog, AdjustStockDialog, CategoriesScreen, CategoryGrid, CategoryCard, CategoryFormDialog, LowStockScreen, LowStockBadge) · hooks/(useProductForm, useProductActions, useArchiveToggle, useCategoryOptions, useDeleteCategory) · graphql/(products|categories|inventory).documents.ts · product.ts (labels) · index.ts
-    │   ├── terminal/   components/ (TerminalScreen, TerminalHeader, KhataButtons, PartyModal, RefundButton, ProductPicker, ProductSearchBar, CategoryChips, ProductTile, CartPanel, CartLineRow, PaymentDialog, TotalsSummary, DiscountField, BillGstField, PaymentMethodPicker, PendingSaleBanner, SaleCompleteDialog) · state/ (cart.types.ts, cart.reducer.ts, CartProvider.tsx, cart.storage.ts, cart-preview.ts, sale-input.ts, pending-sale.storage.ts) · hooks/ (useBarcodeScan, useCartProducts, useCartPreview, useCreateSale, sale-sender.ts, sale-errors.ts) · graphql/(terminal|sale).documents.ts · index.ts
+    │   ├── catalog/    components/ (ProductsScreen, ProductFilters, ProductList, ProductTable, ProductRowActions, ProductDialogs, ProductFormDialog, ProductFormFields, CloneProductDialog, RestockDialog, AdjustStockDialog, CategoriesScreen, CategoryGrid, CategoryCard, CategoryFormDialog, LowStockScreen, LowStockBadge) · hooks/(useProductForm, useProductActions, useArchiveToggle, useDeleteProduct, useCategoryOptions, useDeleteCategory) · graphql/(products|categories|inventory).documents.ts · product.ts (labels) · index.ts
+    │   ├── terminal/   components/ (TerminalScreen, TerminalHeader, KhataButtons, PartyModal, RefundButton, ProductPicker, ProductSearchBar, CategoryChips, ProductCards, ProductTile, ProductRows, CartPanel, CartLineRow, PaymentDialog, TotalsSummary, DiscountField, ItemDiscountField, BillGstField, PaymentMethodPicker, PendingSaleBanner, SaleCompleteDialog) · state/ (cart.types.ts, cart.reducer.ts, CartProvider.tsx, cart.storage.ts, cart-preview.ts, sale-input.ts, pending-sale.storage.ts) · hooks/ (useBarcodeScan, useCartProducts, useCartPreview, useCreateSale, useProductView, sale-sender.ts, sale-errors.ts) · graphql/(terminal|sale).documents.ts · index.ts
     │   ├── orders/     components/ (OrdersScreen, OrdersPanel, OrderFilters, OrdersTable, NewOrdersBanner, RefundDialog, RefundLinesTable) · hooks/ (useRefund, useReprint) · graphql/orders.documents.ts · order-labels.ts · index.ts
-    │   ├── customers/  components/ (CustomersPanel, CustomerKhataPanel, UdhaarCustomerPicker) · hooks/useCustomerKhata.ts · graphql/customers.documents.ts · customer-labels.ts · index.ts
+    │   ├── customers/  components/ (CustomersPanel, CustomerKhataPanel, UdhaarCustomerPicker) · hooks/(useCustomerKhata, useDeleteCustomer) · graphql/customers.documents.ts · customer-labels.ts · index.ts
     │   ├── vendors/    (same shape as customers/, without the Udhaar picker)
     │   ├── dashboard/  components/ (DashboardScreen, StatTile, StatTiles, SummaryCards, DashboardHistory (lazy chunk), MonthlySalesCard, ProductFilter, ProductRanking) · graphql/dashboard.documents.ts · dashboard-labels.ts · index.ts
     │   ├── ai/         components/ (AiHomeScreen, AiFeatureScreen, AiAnswerCard, AiReportPrint (A4), AiChatScreen, ChatConversation, AiKeyNotice, LanguagePicker, PeriodPickers, AiResultView, AiMarkdown (sanitised)) · hooks/ (useAiRequest, useAiFeature, useAiChat) · lib/ (ai-features.ts, chat-history.ts) · graphql/ai.documents.ts · index.ts
-    │   ├── staff/      components/ (StaffScreen, StaffFilters, StaffList, StaffTable, CreateStaffDialog, EditStaffDialog, ResetPasswordDialog, StaffDialogs, role-options.ts) · hooks/useStaffStatusToggle.ts · graphql/staff.documents.ts · staff-user.ts · index.ts
+    │   ├── staff/      components/ (StaffScreen, StaffFilters, StaffList, StaffTable, CreateStaffDialog, EditStaffDialog, ResetPasswordDialog, StaffDialogs, role-options.ts) · hooks/(useStaffStatusToggle, useDeleteStaff) · graphql/staff.documents.ts · staff-user.ts · index.ts
     │   ├── settings/   components/ (SettingsScreen, ShopProfileForm, AiKeyForm, AiKeyFields) · graphql/settings.documents.ts (incl. AiKeyStatus) · index.ts
     │   ├── catalog-io/ components/ (ProductTransferActions, ImportDialog, ImportProgress, LowStockExport) · graphql/catalog-io.documents.ts · lib/upload-import.ts · index.ts (routes pass them into the catalogue screens)
     │   └── activity/   (P-01)
     ├── components/                   # feature-agnostic UI, never imports features/
     │   ├── ui/         # shadcn primitives: button, input, select, dialog, table, badge, card, dropdown-menu, command, popover, skeleton, tabs, checkbox, label, form, sonner, alert, tooltip
     │   ├── data/       CursorPager.tsx (pages + connection) · EmptyState.tsx · DataTable.tsx · TableSkeleton.tsx · SearchInput.tsx · ArchivedToggle.tsx
-    │   ├── ledger/     PartyPanelHeader · PartyListView · PartyTable · PartyLedgerView · LedgerTable · KhataActions · KhataEntryDialog · PartyFormDialog · ArchiveConfirm · BalanceText · khata-labels.ts · usePartyList.ts   # shared by customers + vendors
+    │   ├── ledger/     PartyPanelHeader · PartyListView · PartyTable · PartyLedgerView · LedgerTable · KhataActions · KhataEntryDialog · PartyFormDialog · ArchiveConfirm · BalanceText · khata-labels.ts · usePartyList.ts · usePartyDeletion.ts   # shared by customers + vendors
     │   ├── receipt/    ReceiptBody.tsx · ReceiptPrint.tsx (print-only portal; terminal and order-history reprint)
     │   ├── charts/     ColumnChart.tsx · RankedBars.tsx · ChartTable.tsx · chart-scale.ts (validated palette tokens, ADR-039)
     │   ├── layout/     AdminShell.tsx (sidebar + nav links; account menu passed in) · BrandMark.tsx · PageHeader.tsx · ThemeToggle.tsx · ConnectionBanner.tsx (with realtime)
-    │   ├── feedback/   FullPageSpinner.tsx · ConfirmDialog.tsx · QueryState.tsx · ErrorState.tsx
+    │   ├── feedback/   FullPageSpinner.tsx · ConfirmDialog.tsx · DeleteConfirm.tsx · QueryState.tsx · ErrorState.tsx
     │   └── forms/      FormDialog.tsx · FormTextField.tsx · FormSelectField.tsx · ToggleField.tsx · QuantityStepper.tsx
     ├── graphql/
     │   ├── fragments/  product.fragments.ts · category.fragments.ts · party.fragments.ts (customers, vendors) · order.fragments.ts (orders, refund state, receipt)
@@ -289,7 +290,7 @@ apps/web/
     │   ├── storage/    safe-local-storage.ts
     │   └── env.ts                    # Zod-validated NEXT_PUBLIC_* vars
     ├── providers/      AppProviders.tsx · ApolloAppProvider.tsx · RealtimeProvider.tsx · realtime-context.ts · ThemeProvider.tsx
-    ├── hooks/          useCursorPages.ts (keyset forward/back) · useOnlineStatus.ts · useFileDownload.ts (REST downloads with the cookie)
+    ├── hooks/          useCursorPages.ts (keyset forward/back) · useConfirmedDelete.ts · useOnlineStatus.ts · useFileDownload.ts (REST downloads with the cookie)
     └── styles/         print-receipt.css · print-receipt-items.css · print-view.css
 ```
 
@@ -346,6 +347,7 @@ tools/perf/              package.json · tsconfig.json · vitest.config.ts · bu
 e2e/   package.json · playwright.config.ts
   tests/ auth.spec.ts · staff.spec.ts · catalog.spec.ts · realtime.spec.ts · khata.spec.ts
          billing.spec.ts (E2E-02, 03, 06, NET-07) · billing-resilience.spec.ts (E2E-08, 09) · refunds.spec.ts (E2E-04)
+         counter-tools.spec.ts (E2E-15, 16, 17) · delete.spec.ts (E2E-18, 19, 20)
          dashboard.spec.ts (E2E-13) · import.spec.ts (E2E-12) · ai.spec.ts (E2E-14) · network.spec.ts (NET-04, NET-05) · security-headers.spec.ts (STG-03, local part)
   fixtures/ users.ts · auth.fixture.ts · catalog.fixture.ts · billing.fixture.ts (print stub, counters) · network.fixture.ts (request meter, CDP load bytes)
             realtime.fixture.ts (the Groq stub is `@pos/testkit` groq-stub, started by `scripts/start-api.ts` on port 4199)

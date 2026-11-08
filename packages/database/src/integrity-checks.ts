@@ -44,9 +44,10 @@ export const INTEGRITY_CHECKS: readonly IntegrityCheck[] = [
     offenders: Prisma.sql`
       SELECT o.id::text AS id FROM orders o
       JOIN (SELECT order_id, sum(line_gross) AS gross, sum(line_discount) AS discount,
-                   sum(line_tax) AS tax
+                   sum(item_discount) AS item_discount, sum(line_tax) AS tax
             FROM order_lines GROUP BY order_id) l ON l.order_id = o.id
-      WHERE l.gross <> o.subtotal OR l.discount <> o.discount_total OR l.tax <> o.product_tax_total`,
+      WHERE l.gross <> o.subtotal OR l.discount <> o.discount_total
+         OR l.item_discount <> o.item_discount_total OR l.tax <> o.product_tax_total`,
   },
   {
     name: 'Refund totals',

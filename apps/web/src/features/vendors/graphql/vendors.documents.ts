@@ -101,3 +101,9 @@ export const RestoreVendorDocument = graphql(`
     }
   }
 `);
+
+export const DeleteVendorDocument = graphql(`
+  mutation DeleteVendor($id: ID!) {
+    deleteVendor(id: $id)
+  }
+`);

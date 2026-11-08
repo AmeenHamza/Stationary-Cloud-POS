@@ -101,4 +101,42 @@ export class StaffRepository {
       select: STAFF_SELECT,
     });
   }
+
+  /**
+   * Whether this account did work the shop must keep a name against (D-28): bills, refunds, stock or
+   * khata entries, imports, settings, other accounts, or any audited action except signing in or out.
+   * A relation count in one statement, instead of one query per table.
+   */
+  async hasWorkHistory(userId: string): Promise<boolean> {
+    const counts = await this.db.client.user.findUnique({
+      where: { id: userId },
+      select: {
+        _count: {
+          select: {
+            orders: true,
+            refunds: true,
+            stockMovements: true,
+            customerLedger: true,
+            vendorLedger: true,
+            importJobs: true,
+            settings: true,
+            createdUsers: true,
+            auditLogs: { where: { NOT: { action: { startsWith: 'auth.' } } } },
+          },
+        },
+      },
+    });
+    return Object.values(counts?._count ?? {}).some((count) => count > 0);
+  }
+
+  /** Removes an account with no work history: its sessions go, and its sign-in logs lose the name. */
+  async deleteAccount(userId: string): Promise<void> {
+    const client = this.db.client;
+    await client.session.deleteMany({ where: { userId } });
+    await client.auditLog.updateMany({
+      where: { actorUserId: userId },
+      data: { actorUserId: null },
+    });
+    await client.user.delete({ where: { id: userId }, select: { id: true } });
+  }
 }

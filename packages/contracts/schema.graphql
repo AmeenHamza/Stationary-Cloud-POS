@@ -253,6 +253,8 @@ input CreateVendorInput {
 }
 
 input CustomSaleLineInput {
+  """On this item alone (D-27)."""
+  discount: DiscountInput
   name: String!
   quantity: Int!
   taxRate: Percent!
@@ -306,6 +308,9 @@ type CustomerLedgerEntry {
   """Signed: + raises the balance, − lowers it."""
   amount: Money!
   balanceAfter: Money!
+
+  """That bill number, to regenerate it (F-40)."""
+  billNumber: String
   businessDate: BusinessDate!
   createdAt: DateTime!
   id: ID!
@@ -551,6 +556,18 @@ type Mutation {
 
   """Moves its products to Uncategorised (Q16b)."""
   deleteCategory(id: ID!): Boolean!
+
+  """Only with no bills or entries (HAS_HISTORY, D-28)."""
+  deleteCustomer(id: ID!): Boolean!
+
+  """Only if no bill sold it (HAS_HISTORY, D-28)."""
+  deleteProduct(id: ID!): Boolean!
+
+  """Only with no work on record (HAS_HISTORY, D-28)."""
+  deleteStaffUser(id: ID!): Boolean!
+
+  """Only with no entries (HAS_HISTORY, D-28)."""
+  deleteVendor(id: ID!): Boolean!
   login(input: LoginInput!): Viewer!
   logout: Boolean!
 
@@ -589,12 +606,17 @@ type Order {
   createdAt: DateTime!
   customerId: ID
   customerName: String
+
+  """Every discount: item discounts plus the overall one."""
   discountTotal: Money!
   discountType: DiscountType!
 
   """The flat amount, or the percentage for PERCENT."""
   discountValue: Money!
   id: ID!
+
+  """The part of discountTotal given on items (D-27)."""
+  itemDiscountTotal: Money!
   paymentMethod: PaymentMethod!
   productTaxTotal: Money!
   refundedTotal: Money!
@@ -637,12 +659,17 @@ type OrderDetail {
   createdAt: DateTime!
   customerId: ID
   customerName: String
+
+  """Every discount: item discounts plus the overall one."""
   discountTotal: Money!
   discountType: DiscountType!
 
   """The flat amount, or the percentage for PERCENT."""
   discountValue: Money!
   id: ID!
+
+  """The part of discountTotal given on items (D-27)."""
+  itemDiscountTotal: Money!
 
   """At most 100 (Q34)."""
   lines: [OrderLine!]!
@@ -661,6 +688,11 @@ type OrderDetail {
 type OrderLine {
   barcode: String
   id: ID!
+
+  """This item's own discount (D-27)."""
+  itemDiscount: Money!
+
+  """The item discount plus its share of the overall one."""
   lineDiscount: Money!
   lineGross: Money!
   lineNet: Money!
@@ -799,6 +831,7 @@ type Product {
 enum ProductChange {
   ARCHIVED
   CREATED
+  DELETED
   RESTORED
   UPDATED
 }
@@ -961,6 +994,9 @@ type Receipt {
   discountTotal: Money!
   exchangeReturnPolicy: String
   footer: String
+
+  """The part of discountTotal given on items (D-27)."""
+  itemDiscountTotal: Money!
   lines: [ReceiptLine!]!
   logoDataUrl: String
   orderId: ID!
@@ -973,6 +1009,9 @@ type Receipt {
 }
 
 type ReceiptLine {
+  """This item's own discount (D-27)."""
+  itemDiscount: Money!
+
   """Quantity × unit price, before discount and tax."""
   lineTotal: Money!
   name: String!
@@ -1064,6 +1103,8 @@ type ResyncRequiredEvent implements ShopEvent {
 }
 
 input SaleLineInput {
+  """On this item alone (D-27)."""
+  discount: DiscountInput
   productId: ID!
   quantity: Int!
   unit: SaleUnit!

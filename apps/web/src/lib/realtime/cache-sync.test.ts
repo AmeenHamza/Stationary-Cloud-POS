@@ -74,6 +74,22 @@ describe('live cache patches (RT-07)', () => {
   });
 });
 
+describe('a deleted product (D-28)', () => {
+  it('leaves the cache, so cached lists and the cart stop showing it', () => {
+    const cache = cacheWithProduct();
+    applyProductChanged(cache, {
+      __typename: 'ProductChangedEvent',
+      seq: '8',
+      type: 'product.changed',
+      productChange: 'DELETED',
+      productId: 'p1',
+      version: 6,
+      product: null,
+    });
+    expect(cache.extract()['Product:p1']).toBeUndefined();
+  });
+});
+
 describe('reconcile after a reconnect (RT-06)', () => {
   it('refetches only mounted queries and evicts unused list fields', async () => {
     const requested: string[] = [];

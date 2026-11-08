@@ -17,6 +17,7 @@ import { StockRepository } from './inventory/persistence/stock.repository';
 import { ArchiveProductService } from './products/application/archive-product.service';
 import { CloneProductService } from './products/application/clone-product.service';
 import { CreateProductService } from './products/application/create-product.service';
+import { DeleteProductService } from './products/application/delete-product.service';
 import { NewProductRecorder } from './products/application/new-product-recorder';
 import { ProductEvents } from './products/application/product-events';
 import { ProductImportService } from './products/application/product-import.service';
@@ -43,6 +44,7 @@ import { ProductsRepository } from './products/persistence/products.repository';
     UpdateProductService,
     CloneProductService,
     ArchiveProductService,
+    DeleteProductService,
     NewProductRecorder,
     ProductImportService,
     ProductEvents,

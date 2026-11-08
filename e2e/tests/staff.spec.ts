@@ -30,7 +30,7 @@ test.describe.serial('staff management (F-31, E2E-01)', () => {
     await dialog.getByLabel('Password').fill(NEW_CASHIER.password);
     await dialog.getByRole('button', { name: 'Create account' }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole('cell', { name: NEW_CASHIER.fullName })).toBeVisible();
+    await expect(page.getByRole('cell', { name: NEW_CASHIER.fullName, exact: true })).toBeVisible();
     await signOut(page);
 
     await signIn(page, NEW_CASHIER);

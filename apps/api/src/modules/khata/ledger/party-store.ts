@@ -82,6 +82,10 @@ export interface PartyStore<Row extends PartyRow, Data, Entry extends LedgerRow>
   insert: (data: Data) => Promise<Row>;
   update: (id: string, version: number, data: Data) => Promise<Row>;
   setArchivedAt: (id: string, version: number, archivedAt: Date | null) => Promise<Row>;
+  /** Whether any khata entry or bill points at this party, which keeps it from being deleted. */
+  hasHistory: (id: string) => Promise<boolean>;
+  /** Removes the row; a stale `version` matches nothing and a surviving reference is refused. */
+  delete: (id: string, version: number) => Promise<void>;
   /** `balance = balance + delta` in one statement; `requireActive` refuses archived parties. */
   applyDelta: (id: string, delta: string, requireActive: boolean) => Promise<Row>;
   insertEntry: (entry: NewLedgerEntry) => Promise<void>;

@@ -42,4 +42,6 @@ export interface LedgerEntry {
   note: string | null;
   businessDate: string;
   reference?: string | null;
+  /** The bill this entry came from, which can be regenerated (F-40). */
+  orderId?: string | null;
 }

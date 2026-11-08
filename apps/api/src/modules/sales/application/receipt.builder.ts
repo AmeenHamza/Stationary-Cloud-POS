@@ -38,6 +38,7 @@ export class ReceiptBuilder {
         quantity: line.quantity,
         unitPrice: line.unitPrice,
         lineTotal: line.lineGross,
+        itemDiscount: line.itemDiscount,
       })),
     };
   }

@@ -139,6 +139,18 @@ export class VendorsRepository implements PartyStore<VendorRow, VendorData, Vend
     });
   }
 
+  async hasHistory(id: string): Promise<boolean> {
+    const entry = await this.db.client.vendorLedgerEntry.findFirst({
+      where: { vendorId: id },
+      select: { id: true },
+    });
+    return entry !== null;
+  }
+
+  async delete(id: string, version: number): Promise<void> {
+    await this.db.client.vendor.delete({ where: { id, version }, select: { id: true } });
+  }
+
   countEntries(partyId: string, since: Date | null): Promise<number> {
     const where = ledgerWhere('vendorId', partyId, { since, take: 0, cursor: null });
     return this.db.client.vendorLedgerEntry.count({

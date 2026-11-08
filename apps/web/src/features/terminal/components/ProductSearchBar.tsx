@@ -11,8 +11,9 @@ import { createCoalescer } from '@/lib/timing/debounce';
 import { useBarcodeScan } from '../hooks/useBarcodeScan';
 
 /**
- * "Search by name or scan barcode" (F-18). Typing updates the name search after a short debounce,
- * while Enter first tries the current text as a barcode.
+ * "Search by name or scan barcode" (F-18). Typing updates the name search after a short debounce.
+ * Enter decides at once: it cancels that pending search and tries the text as a barcode, so a scan
+ * sends one lookup and nothing else (NET-07); only a code that matches nothing searches by name.
  */
 export function ProductSearchBar({ onSearch }: { onSearch: (search: string) => void }) {
   const [text, setText] = useState('');
@@ -34,6 +35,7 @@ export function ProductSearchBar({ onSearch }: { onSearch: (search: string) => v
     [],
   );
   const submit = async () => {
+    coalescerRef.current.cancelAll();
     const code = text.trim();
     if (code === '') {
       onSearch('');
@@ -42,6 +44,8 @@ export function ProductSearchBar({ onSearch }: { onSearch: (search: string) => v
     try {
       if (await scan(code)) {
         setText('');
+      } else {
+        onSearch(code);
       }
     } catch (error) {
       toast.error(userMessageOf(error));

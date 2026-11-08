@@ -1,6 +1,6 @@
 import { toMoneyString, type BillResult } from '@pos/domain';
 
-import type { BillLineInput, PricedLine } from './sale-pricing';
+import type { BillLineInput, LineDiscount, PricedLine } from './sale-pricing';
 import type { CreateSaleInput } from '@pos/validation';
 
 export interface CustomPricedLine {
@@ -9,6 +9,7 @@ export interface CustomPricedLine {
   quantity: number;
   unitPrice: string;
   taxRate: string;
+  discount: LineDiscount;
 }
 
 export function customLinesOf(input: CreateSaleInput): CustomPricedLine[] {
@@ -18,7 +19,19 @@ export function customLinesOf(input: CreateSaleInput): CustomPricedLine[] {
     quantity: line.quantity,
     unitPrice: line.unitPrice,
     taxRate: line.taxRate,
+    discount: line.discount,
   }));
+}
+
+/** Whether the bill gives any discount, overall or on an item (`sales:discount`, D-11, D-27). */
+export function givesDiscount(input: CreateSaleInput): boolean {
+  const onItem = (line: { discount?: LineDiscount }): boolean =>
+    (line.discount?.type ?? 'NONE') !== 'NONE';
+  return (
+    input.discount.type !== 'NONE' ||
+    input.lines.some(onItem) ||
+    (input.customLines ?? []).some(onItem)
+  );
 }
 
 export function outOfStockNames(priced: readonly PricedLine[]): string[] {
@@ -38,11 +51,13 @@ export function billLineInputs(
       unitPrice: line.unitPrice,
       quantity: line.quantity,
       taxRate: line.product.taxRate,
+      discount: line.discount,
     })),
     ...custom.map((line) => ({
       unitPrice: line.unitPrice,
       quantity: line.quantity,
       taxRate: line.taxRate,
+      discount: line.discount,
     })),
   ];
 }
@@ -83,6 +98,7 @@ export function orderLinesData(
       lineNo: index + 1,
       ...line,
       lineGross: toMoneyString(amounts.lineGross),
+      itemDiscount: toMoneyString(amounts.itemDiscount),
       lineDiscount: toMoneyString(amounts.lineDiscount),
       lineNet: toMoneyString(amounts.lineNet),
       lineTax: toMoneyString(amounts.lineTax),

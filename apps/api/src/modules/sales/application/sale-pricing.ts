@@ -2,6 +2,7 @@ import {
   billDiscountOf,
   billGstOf,
   calculateBill,
+  lineDiscountOf,
   money,
   percent,
   piecesPerUnit,
@@ -21,7 +22,11 @@ export interface PricedLine {
   quantity: number;
   unitPrice: string;
   piecesPerUnit: number;
+  /** The cashier's discount on this item (D-27). */
+  discount: LineDiscount;
 }
+
+export type LineDiscount = CreateSaleInput['lines'][number]['discount'];
 
 /**
  * Prices each line: piece price, or box price for BOX (D-17). Missing or archived products are
@@ -61,6 +66,7 @@ export function priceLines(
       quantity: line.quantity,
       unitPrice,
       piecesPerUnit: piecesPerUnit(line.unit, product.piecesPerBox),
+      discount: line.discount,
     };
   });
 }
@@ -69,6 +75,7 @@ export interface BillLineInput {
   unitPrice: string;
   quantity: number;
   taxRate: string;
+  discount: LineDiscount;
 }
 
 /** The authoritative bill (SYSTEM_DESIGN.md §3.2): the same domain function as the cart preview. */
@@ -82,6 +89,7 @@ export function billOf(
       unitPrice: money(line.unitPrice),
       quantity: line.quantity,
       taxRate: percent(line.taxRate),
+      discount: lineDiscountOf(line.discount),
     })),
     billDiscountOf(discount),
     billGstOf(billGst),

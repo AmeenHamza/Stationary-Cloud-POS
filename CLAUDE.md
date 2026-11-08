@@ -34,7 +34,8 @@ and BullMQ · Vitest (integration tests on real Postgres + Redis), Playwright ·
 5. **PostgreSQL is the only source of truth.** Redis never holds a record that isn't in Postgres, never caches
    stock, prices for billing, orders or ledgers, and a Redis failure must never fail a sale.
 6. **Financial correctness first:** server-side calculation from locked rows, `expectedTotal` check,
-   idempotency keys, row locks in ascending id order, DB `CHECK` constraints, archive instead of delete.
+   idempotency keys, row locks in ascending id order, DB `CHECK` constraints, archive instead of delete
+   for anything a bill or khata entry depends on (D-12, D-28).
 7. **Authorization on the server** for every resolver (`@RequirePermission`/`@Public`), with no exceptions.
 8. **Don't invent business rules.** Use FEATURES.md decisions (D-xx) and documented defaults (Q-xx). Record new
    questions there.

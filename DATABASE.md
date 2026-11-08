@@ -25,7 +25,8 @@
    `@@map`/`@map`. Constraint and index names are explicit: `<table>_<cols>_<kind>` (`_pk`, `_uq`, `_fk`, `_ck`, `_idx`).
 7. **Optimistic concurrency:** editable entities have `version int NOT NULL DEFAULT 1`. Updates use
    `WHERE id = $1 AND version = $2` and increment it; zero updated rows means `CONFLICT`.
-8. **Archive, never delete** financial rows (D-12, ADR-028). Archivable entities have `archived_at`.
+8. **Archive, never delete** financial rows (D-12, ADR-028). Archivable entities have `archived_at`. A row
+   no bill or khata entry depends on may be deleted (D-28, ADR-046).
 9. **Extensions:** `pg_trgm` (substring search) and `citext` (case-insensitive unique names).
 10. **Legacy mapping:** migrated tables carry `legacy_id varchar(64)` with a partial unique index, which
     makes the migration idempotent (§11).
@@ -306,6 +307,7 @@ Purpose: an immutable bill header with a financial snapshot (F-15, F-19–F-22).
 | discount_value | numeric(12,2) | no | flat amount, or percent (≤ 100) |
 | subtotal | numeric(12,2) | no | Σ line_gross |
 | discount_total | numeric(12,2) | no | Σ line_discount, `≤ subtotal` |
+| item_discount_total | numeric(12,2) | no | default 0; Σ item_discount, the part of `discount_total` given on items (D-27) |
 | product_tax_total | numeric(12,2) | no | Σ line_tax |
 | bill_gst_rate | numeric(5,2) | yes | NULL = not applied |
 | bill_gst_amount | numeric(12,2) | no | default 0 |
@@ -318,7 +320,8 @@ Purpose: an immutable bill header with a financial snapshot (F-15, F-19–F-22).
 
 Checks: `total = subtotal - discount_total + product_tax_total + bill_gst_amount`;
 `refunded_total BETWEEN 0 AND total`; `payment_method <> 'UDHAAR' OR customer_id IS NOT NULL`;
-`bill_gst_rate IS NOT NULL OR bill_gst_amount = 0`; `discount_type <> 'NONE' OR (discount_value = 0 AND discount_total = 0)`;
+`bill_gst_rate IS NOT NULL OR bill_gst_amount = 0`; `discount_type <> 'NONE' OR (discount_value = 0 AND discount_total = item_discount_total)`;
+`item_discount_total BETWEEN 0 AND discount_total`;
 `discount_type <> 'PERCENT' OR discount_value <= 100`.
 Indexes: `orders_created_idx (created_at DESC, id DESC)`; `orders_status_created_idx (status, created_at DESC, id DESC)`;
 `orders_business_date_idx (business_date)`.
@@ -337,11 +340,12 @@ Indexes: `orders_created_idx (created_at DESC, id DESC)`; `orders_status_created
 | quantity | int | no | units sold, `1–10000` |
 | unit_price | numeric(12,2) | no | piece or box price at sale time |
 | tax_rate | numeric(5,2) | no | snapshot |
-| line_gross, line_discount, line_net, line_tax | numeric(12,2) | no | |
+| line_gross, line_discount, line_net, line_tax | numeric(12,2) | no | `line_discount` is the item discount plus this line's share of the overall one |
+| item_discount | numeric(12,2) | no | default 0; this item's own discount (D-27) |
 | refunded_quantity | int | no | default 0 |
 
 Checks: `line_gross = unit_price * quantity`; `line_net = line_gross - line_discount`;
-`line_discount BETWEEN 0 AND line_gross`; `refunded_quantity BETWEEN 0 AND quantity`;
+`line_discount BETWEEN 0 AND line_gross`; `item_discount BETWEEN 0 AND line_discount`; `refunded_quantity BETWEEN 0 AND quantity`;
 `sale_unit = 'BOX' OR pieces_per_unit = 1`.
 
 ### 4.12 `refunds` and `refund_lines` (sales.prisma)
@@ -442,6 +446,9 @@ Retries are safe because every financial mutation is idempotent (§7).
 | `createProduct`, `cloneProduct` | products, [stock_movements `OPENING`], audit | — | `product.changed`, [`lowStock.countChanged`] if it starts low |
 | `updateProduct` | products (version check), audit (changed field names) | product row | `product.changed`, [`lowStock.countChanged`] |
 | `archiveProduct`, `restoreProduct` | products.archived_at, audit | product row | `product.changed`, [`lowStock.countChanged`] |
+| `deleteProduct` | stock_movements, import_job_rows and products (deleted), clones' cloned_from_id, audit | product row, so a sale at another counter either finishes first (refused) or finds no product | `product.changed` (`DELETED`), [`lowStock.countChanged`] |
+| `deleteCustomer`, `deleteVendor` | customers or vendors (deleted), audit | none: the version check and foreign keys refuse an entry or bill landing in between | none |
+| `deleteStaffUser` | sessions (revoked, deleted), audit_logs.actor_user_id of sign-in rows (nulled), users (deleted), audit | target and active admins, ascending | `session.revoked` |
 | `deleteCategory` | products.category_id → NULL (version + 1), categories, audit | — (FK `RESTRICT` refuses a concurrent insert into the category: `CONFLICT`) | `category.changed` |
 | Customer payment / manual credit | customers.balance, customer_ledger_entries, audit | customer row | `customer.balanceChanged` |
 | Vendor purchase / payment | vendors.balance, vendor_ledger_entries, audit | vendor row | `vendor.balanceChanged` |
@@ -485,7 +492,7 @@ existing row and compare `request_hash` (SHA-256 of the canonical JSON input, `c
 | Data | Policy |
 |---|---|
 | Orders, refunds, ledger entries, stock movements, audit logs | Kept forever. Lists default to the last 90 days; "Show archived" removes the lower bound |
-| Products, customers, vendors | `archived_at` soft archive. Hidden by default; restorable. Never hard-deleted once referenced |
+| Products, customers, vendors | `archived_at` soft archive. Hidden by default; restorable. Never hard-deleted once a bill or khata entry references them; before that, Delete removes them (D-28) |
 | Categories | Hard-deleted after their products move to Uncategorised (no financial references) |
 | Sessions | Expired/revoked rows pruned after 30 days (on login) |
 | Outbox | Published rows pruned after 7 days (prune-on-write, ADR-009) |
@@ -572,6 +579,6 @@ Output is bounded: counts plus the first 50 offending ids.
 | Stock ledger | For each product, Σ `stock_movements.quantity_pieces` = `products.stock_pieces` |
 | Customer khata | For each customer, Σ ledger `amount` = `customers.balance`, and the latest `balance_after` = balance |
 | Vendor khata | Same for vendors |
-| Order arithmetic | Σ line_gross = subtotal; Σ line_discount = discount_total; Σ line_tax = product_tax_total |
+| Order arithmetic | Σ line_gross = subtotal; Σ line_discount = discount_total; Σ item_discount = item_discount_total; Σ line_tax = product_tax_total |
 | Refund totals | Σ refunds.amount per order = `orders.refunded_total`; Σ refund_lines.quantity per line = `refunded_quantity` |
 | Bill numbers | No duplicates; for each date, numbers 1..last_value are present for non-migrated bills |

@@ -127,6 +127,7 @@ Errors follow the GraphQL spec. `extensions.code` is one of the codes below (sou
 | `REFUND_EXCEEDS_REMAINING` | Requested quantity > refundable | Reload order lines |
 | `CUSTOMER_REQUIRED` | `UDHAAR` without `customerId` | Open the customer picker |
 | `BALANCE_NOT_ZERO` | Archiving a customer/vendor with a balance (Q33) | Explain |
+| `HAS_HISTORY` | Deleting a product, customer, vendor or staff account that bills, khata entries or recorded work depend on (D-28) | Explain; offer Archive or Disable |
 | `LAST_ADMIN` | Disabling or demoting the last active admin | Explain |
 | `RATE_LIMITED` | Bucket exceeded; `extensions.retryAfterSeconds` | Toast with wait time |
 | `BAD_CURSOR` | Invalid or stale cursor | Restart the list from the first page |
@@ -154,17 +155,17 @@ from `@pos/contracts/permissions.ts`.
 | Permission | Admin | Cashier | Grants |
 |---|---|---|---|
 | `catalog:read` | ✓ | ✓ | Products, categories, low stock (no cost price) |
-| `catalog:write` | ✓ | | Product/category CRUD, clone, archive; `Product.costPrice` |
+| `catalog:write` | ✓ | | Product/category CRUD, clone, archive, delete; `Product.costPrice` |
 | `inventory:restock` | ✓ | | `restockProduct` |
 | `inventory:adjust` | ✓ | | `adjustStock`, `stockMovements` (D-18) |
 | `sales:create` | ✓ | ✓ | `createSale` |
-| `sales:discount` | ✓ | ✓ | Non-`NONE` discount in `createSale` (D-11) |
+| `sales:discount` | ✓ | ✓ | Non-`NONE` discount, overall or on an item, in `createSale` (D-11, D-27) |
 | `orders:read` | ✓ | ✓ | Order history, receipts |
 | `orders:refund` | ✓ | ✓ | `refundOrder` (D-11) |
 | `customers:read` / `customers:write` | ✓ | ✓ | Customers, khata entries (D-11) |
-| `customers:archive` | ✓ | | Archive/restore customers |
+| `customers:archive` | ✓ | | Archive, restore and delete customers |
 | `vendors:read` / `vendors:write` | ✓ | ✓ | Vendors, purchases, payments (D-11) |
-| `vendors:archive` | ✓ | | Archive/restore vendors |
+| `vendors:archive` | ✓ | | Archive, restore and delete vendors |
 | `dashboard:read` | ✓ | | `dashboard` |
 | `staff:manage` | ✓ | | Staff queries and mutations |
 | `settings:read` | ✓ | ✓ | `shopSettings` (profile, default GST) |
@@ -206,7 +207,7 @@ record of a permitted type. IDs are validated as UUIDs, so malformed ids never r
 | `saleStatus(idempotencyKey)` | sales:create | `Order` or null. Confirms the outcome of an unconfirmed sale (SYSTEM_DESIGN.md §3.4) |
 | `customers(filter: { search, withBalanceOnly, includeArchived }, first, after)` | customers:read | `CustomerConnection`; search matches name or phone digits |
 | `customer(id)` | customers:read | `Customer` |
-| `customerLedger(customerId, includeArchived, first, after)` | customers:read | `CustomerLedgerEntryConnection`, newest first |
+| `customerLedger(customerId, includeArchived, first, after)` | customers:read | `CustomerLedgerEntryConnection`, newest first; `orderId` and `billNumber` name the bill of a credit sale, which `orderReceipt` regenerates (F-40) |
 | `vendors(…)`, `vendor(id)`, `vendorLedger(…)` | vendors:read | Same shapes as customers |
 | `dashboard(date: BusinessDate)` | dashboard:read | `Dashboard` (§6.3) |
 | `importJob(id)` | catalog:import | `ImportJob` |
@@ -225,6 +226,7 @@ record of a permitted type. IDs are validated as UUIDs, so malformed ids never r
 | `updateStaffUser(input: { id, fullName, role, version })` [V] | staff:manage | Role change revokes that user's sessions |
 | `setStaffUserStatus(input: { id, status })` | staff:manage | `DISABLED` revokes sessions; `LAST_ADMIN` guard |
 | `resetStaffPassword(input: { id, newPassword })` | staff:manage | Revokes sessions |
+| `deleteStaffUser(id)` | staff:manage | Returns `true`. Removes the account (D-28): `HAS_HISTORY` if it has bills, refunds, stock or khata entries, imports, settings or other accounts, or any audited action except signing in or out; `CONFLICT` for your own account; `LAST_ADMIN` guard |
 | `updateShopSettings(input: { shopName, address, phone, receiptFooter, defaultBillGstRate, version })` [V] | settings:write | |
 | `setAiApiKey(input: { apiKey })` / `clearAiApiKey` | settings:write | Return `ShopSettings`. The key (20–200 characters, no spaces) is encrypted and never returned; only `aiKeyLast4`. Emits `settings.changed` |
 | `createCategory` / `updateCategory` [V] / `deleteCategory(id)` | catalog:write | Delete moves products to Uncategorised |
@@ -232,16 +234,19 @@ record of a permitted type. IDs are validated as UUIDs, so malformed ids never r
 | `updateProduct(input: { id, version, …fields })` [V] | catalog:write | Cannot change stock (BR-03) |
 | `cloneProduct(input: { idempotencyKey, sourceProductId, barcode, initialStockPieces })` [K] | catalog:write | One call per scanned unit (D-19) |
 | `archiveProduct(id)` / `restoreProduct(id)` | catalog:write | |
+| `deleteProduct(id)` | catalog:write | Returns `true`. Removes a product no bill sold, with its stock history (D-28); `HAS_HISTORY` otherwise |
 | `restockProduct(input: { idempotencyKey, productId, boxes, pieces, note })` [K] | inventory:restock | Adds `boxes × piecesPerBox + pieces` |
 | `adjustStock(input: { idempotencyKey, productId, direction, quantityPieces, reason, note })` [K] | inventory:adjust | D-18 |
 | `createSale(input: CreateSaleInput)` [K] | sales:create (+ sales:discount) | §10.2 |
 | `refundOrder(input: { idempotencyKey, orderId, lines: [{ orderLineId, quantity }], refundAll, reason, expectedAmount })` [K] | orders:refund | Exactly one of `lines` / `refundAll`. Returns `RefundOrderPayload { order: OrderDetail, refund: RefundSummary, replayed }`; `QUOTE_MISMATCH` carries the server's `amount` |
 | `createCustomer` / `updateCustomer` [V] | customers:write | |
 | `archiveCustomer(id)` / `restoreCustomer(id)` | customers:archive | `BALANCE_NOT_ZERO` guard |
+| `deleteCustomer(id)` | customers:archive | Returns `true`. Only with no bills or khata entries (`HAS_HISTORY`, D-28) |
 | `addCustomerCredit(input: { idempotencyKey, customerId, amount, note })` [K] | customers:write | "Add Udhaar" (`MANUAL_CREDIT`). Khata entry mutations return the party with its new balance |
 | `receiveCustomerPayment(input: { idempotencyKey, customerId, amount, method, note })` [K] | customers:write | `method ≠ UDHAAR` |
 | `createVendor` / `updateVendor` [V] | vendors:write | |
 | `archiveVendor(id)` / `restoreVendor(id)` | vendors:archive | |
+| `deleteVendor(id)` | vendors:archive | Returns `true`. Only with no khata entries (`HAS_HISTORY`, D-28) |
 | `addVendorPurchase(input: { idempotencyKey, vendorId, amount, description })` [K] | vendors:write | Amount only (D-20) |
 | `payVendor(input: { idempotencyKey, vendorId, amount, method, note })` [K] | vendors:write | |
 | `aiSalesInsights(input: { periodDays, language })` | ai:use | `periodDays ∈ {7,14,30,60,90}` |
@@ -312,7 +317,7 @@ value reads exactly like a queried one. Budget: ≤ 1 KB per event (NETWORK_OPTI
 | Type | GraphQL type | Audience | Payload fields | Emitted by | Client action (`lib/realtime/handlers/*`) |
 |---|---|---|---|---|---|
 | `stock.changed` | `StockChangedEvent` | staff | `items[{ productId, stockPieces, isLowStock, version }]` | sale, refund, restock, adjust, create/clone with stock | Patch cached `Product` if `version` is newer; cart re-evaluates warnings |
-| `product.changed` | `ProductChangedEvent` | staff | `change` (`CREATED`/`UPDATED`/`ARCHIVED`/`RESTORED`), `productId`, `version`, `product: ProductSnapshot` (all public fields, no `costPrice`; **null** when the snapshot would push the event over 1 KB) | product commands | `writeFragment` if newer (a category move drops the cached `categoryName`); null snapshot → evict, mounted screens re-read. `ARCHIVED` patches `archivedAt`; lists drop it on the next fetch. `CREATED`: no list insertion |
+| `product.changed` | `ProductChangedEvent` | staff | `change` (`CREATED`/`UPDATED`/`ARCHIVED`/`RESTORED`/`DELETED`), `productId`, `version`, `product: ProductSnapshot` (all public fields, no `costPrice`; **null** when deleted, or when the snapshot would push the event over 1 KB) | product commands | `writeFragment` if newer (a category move drops the cached `categoryName`); null snapshot → evict, mounted screens re-read. `ARCHIVED` patches `archivedAt`; lists drop it on the next fetch. `DELETED`: cached lists drop it and open carts remove it. `CREATED`: no list insertion |
 | `catalog.bulkChanged` | `CatalogBulkChangedEvent` | staff | `reason: IMPORT`, `importJobId`, `changedCount` | import completion | Evict `products`/`categories` root fields; refetch active queries |
 | `category.changed` | `CategoryChangedEvent` | staff | `change` (`CREATED`/`UPDATED`/`DELETED`), `categoryId`, `category: CategorySnapshot` (null when deleted) | category commands | Patch or evict; refetch active `categories` (counts) and, after a rename or delete, the active `products` page |
 | `lowStock.countChanged` | `LowStockCountChangedEvent` | admin | `crossedProductIds[]` (a signal, so concurrent transactions cannot publish counts out of order) | in the transaction, when any product crossed its threshold | Coalesced refetch of `lowStockCount` (sidebar badge) and the active low-stock page |
@@ -395,10 +400,10 @@ send `X-POS-CSRF: 1` (forces a preflight).
 
 | Method and path | Permission | Behaviour |
 |---|---|---|
-| `POST /v1/imports/products` (multipart `file`, ≤ 5 MB, `.xlsx`/`.csv`) | catalog:import | Parses and stages rows, enqueues the job, returns `202 { importJobId }` |
+| `POST /v1/imports/products` (multipart `file`, ≤ 5 MB, `.xlsx`/`.csv`) | catalog:import | Parses and stages rows, creates the categories they name (D-29), enqueues the job, returns `202 { importJobId }` |
 | `GET /v1/imports/products/template.xlsx` | catalog:import | Template with headers and one example row |
 | `GET /v1/imports/:jobId/errors.csv` | catalog:import | Failed rows with messages (streamed) |
-| `GET /v1/exports/products?format=csv\|xlsx\|pdf&categoryId=&includeArchived=` | catalog:export | Streamed file, read in keyset batches of 500 |
+| `GET /v1/exports/products?format=csv\|xlsx\|pdf&categoryId=&includeArchived=` | catalog:export | Streamed file, read in keyset batches of 500; its Category column names each product's category |
 | `GET /v1/exports/low-stock?format=csv\|pdf` | catalog:export | Streamed file |
 | `GET /health/live` | public | `200` if the process runs; touches **neither** DB nor Redis |
 | `GET /health/ready` | public | `200` if Postgres answers `SELECT 1`; reports Redis as `degraded` but stays `200` (SYSTEM_DESIGN.md §6.5) |
@@ -437,7 +442,12 @@ input CreateSaleInput {
   customerId: ID                  # required when paymentMethod = UDHAAR (D-15)
   expectedTotal: Money!           # preview total shown to the cashier
 }
-input SaleLineInput { productId: ID!, unit: SaleUnit!, quantity: Int! }
+input SaleLineInput {
+  productId: ID!
+  unit: SaleUnit!
+  quantity: Int!
+  discount: DiscountInput         # on this item alone, taken before the overall one (D-27)
+}
 
 type CreateSalePayload {
   order: Order!

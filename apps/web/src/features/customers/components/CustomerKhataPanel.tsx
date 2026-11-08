@@ -1,11 +1,14 @@
 'use client';
 
 import { useQuery } from '@apollo/client/react';
+import { PrinterIcon } from 'lucide-react';
 
 import { KhataActions } from '@/components/ledger/KhataActions';
 import { PartyLedgerView } from '@/components/ledger/PartyLedgerView';
 import { useLedgerPages } from '@/components/ledger/usePartyList';
+import { Button } from '@/components/ui/button';
 import { useCan } from '@/features/auth';
+import { useReprint } from '@/features/orders';
 import { userMessageOf } from '@/lib/errors/graphql-error';
 
 import { CUSTOMER_BALANCE_LABELS, CUSTOMER_ENTRY_LABELS } from '../customer-labels';
@@ -18,6 +21,7 @@ function CustomerKhata({ customer }: { customer: CustomerFieldsFragment }) {
   const ledgerPages = useLedgerPages();
   const mutations = useCustomerKhata(customer);
   const canArchive = useCan('customers:archive');
+  const printer = useReprint();
   const { data, error } = useQuery(CustomerLedgerDocument, {
     variables: {
       customerId: customer.id,
@@ -25,39 +29,64 @@ function CustomerKhata({ customer }: { customer: CustomerFieldsFragment }) {
       includeArchived: ledgerPages.includeArchived,
     },
   });
+  const ledger = data?.customerLedger;
   return (
-    <PartyLedgerView
-      {...ledgerPages}
-      party={customer}
-      labels={CUSTOMER_BALANCE_LABELS}
-      balanceTitle="Outstanding balance"
-      typeLabels={CUSTOMER_ENTRY_LABELS}
-      ledger={data?.customerLedger}
-      error={error}
-      actions={
-        <KhataActions
-          config={{
-            ...mutations,
-            raise: {
-              label: 'Add Udhaar',
-              description: 'Goods given on credit: the amount is added to what the customer owes.',
-              noteLabel: 'Note (optional)',
-            },
-            lower: {
-              label: 'Receive payment',
-              description: 'Money received: the amount is taken off what the customer owes.',
-            },
-            party: { ...customer, archived: customer.archivedAt !== null },
-            withProducts: false,
-            canArchive,
-          }}
-        />
-      }
-    />
+    <>
+      <PartyLedgerView
+        {...ledgerPages}
+        party={customer}
+        labels={CUSTOMER_BALANCE_LABELS}
+        balanceTitle="Outstanding balance"
+        typeLabels={CUSTOMER_ENTRY_LABELS}
+        ledger={
+          ledger && {
+            ...ledger,
+            nodes: ledger.nodes.map((entry) => ({ ...entry, reference: entry.billNumber })),
+          }
+        }
+        error={error}
+        rowAction={({ orderId, reference }) =>
+          orderId == null ? null : (
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label={`Regenerate bill ${reference ?? ''}`}
+              onClick={() => void printer.reprint(orderId)}
+            >
+              <PrinterIcon /> Regenerate bill
+            </Button>
+          )
+        }
+        actions={
+          <KhataActions
+            config={{
+              ...mutations,
+              raise: {
+                label: 'Add Udhaar',
+                description:
+                  'Goods given on credit: the amount is added to what the customer owes.',
+                noteLabel: 'Note (optional)',
+              },
+              lower: {
+                label: 'Receive payment',
+                description: 'Money received: the amount is taken off what the customer owes.',
+              },
+              party: { ...customer, archived: customer.archivedAt !== null },
+              withProducts: false,
+              canArchive,
+            }}
+          />
+        }
+      />
+      {printer.element}
+    </>
   );
 }
 
-/** One customer's khata (F-25 `#20`): balance, actions and the ledger. Live via balance events. */
+/**
+ * One customer's khata (F-25 `#20`): balance, actions and the ledger, where any Udhaar bill can be
+ * regenerated for a customer who lost it (F-40). Live via balance events.
+ */
 export function CustomerKhataPanel({ customerId }: { customerId: string }) {
   const { data, error } = useQuery(CustomerDocument, { variables: { id: customerId } });
   if (error !== undefined) {

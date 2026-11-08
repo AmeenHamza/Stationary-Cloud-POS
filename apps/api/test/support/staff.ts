@@ -1,4 +1,8 @@
-import { postGraphql, type GraphqlResponse } from './graphql-client';
+import { expect } from 'vitest';
+
+import { querySql } from '@pos/testkit';
+
+import { errorCode, postGraphql, type GraphqlResponse } from './graphql-client';
 
 /** GraphQL call as a signed-in user (cookie from `loginCookie`). */
 export function asUser<T = Record<string, unknown>>(
@@ -8,6 +12,26 @@ export function asUser<T = Record<string, unknown>>(
   variables: Record<string, unknown> = {},
 ): Promise<GraphqlResponse<T>> {
   return postGraphql<T>(baseUrl, query, { variables, headers: { cookie } });
+}
+
+/**
+ * Two admins acted against each other at once: exactly one call won and one active admin remains. The
+ * loser sees LAST_ADMIN, or UNAUTHENTICATED if the winner's commit already signed them out.
+ */
+export async function expectOneAdminLeft(
+  databaseUrl: string,
+  results: readonly GraphqlResponse<unknown>[],
+): Promise<void> {
+  const codes = results.map((r) => errorCode(r) ?? 'OK');
+  expect(codes.filter((code) => code === 'OK')).toHaveLength(1);
+  expect(codes.filter((code) => code !== 'OK')).toEqual([
+    expect.stringMatching(/^(LAST_ADMIN|UNAUTHENTICATED)$/),
+  ]);
+  const [row] = await querySql<{ n: string }>(
+    databaseUrl,
+    "SELECT count(*)::text AS n FROM users WHERE role = 'ADMIN' AND status = 'ACTIVE'",
+  );
+  expect(row?.n).toBe('1');
 }
 
 export const STAFF_FIELDS = 'id username fullName role status version';

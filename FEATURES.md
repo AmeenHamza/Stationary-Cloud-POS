@@ -62,6 +62,9 @@ These override the screenshots wherever they differ. **D** = decided by the owne
 | D-23 | Expiry | **Drop** expiry dates and the Expiry Alerts page (Q13) |
 | D-24 | Hosting | **Neon** for PostgreSQL; web on Vercel; API on a managed always-on host (Render/Railway/Fly — chosen in DECISIONS.md) |
 | D-25 | Tax base | Bill GST is charged on the discounted subtotal **plus** product tax. Example: items Rs 1,000, product tax 10% = Rs 100, Bill GST 18% of Rs 1,100 = Rs 198, total Rs 1,298 |
+| D-27 | Item discount | **New (owner, 2026-11-08):** besides the overall bill discount, which stays as it was, each item on a bill may have its own discount. Details in Q39 |
+| D-28 | Delete | **New (owner, 2026-11-08), "safe delete":** Delete removes the row from the database, but only when no bill or khata entry depends on it; otherwise it is refused and Archive (Disable for staff) remains. Admins only. Bills and khata entries are still never deleted (D-12) |
+| D-29 | Import and categories | **New (owner, 2026-11-08):** an import creates the categories its file names, first, then files each product under its category. This replaces "imports never create categories" in Q37 |
 
 **Assumptions derived from the decisions (confirm at review)**
 
@@ -316,7 +319,7 @@ relevance, pagination and backend entities. "Real-time" and "pagination" entries
 | BR-03 | Editing a product cannot change stock; only restock adds stock | C | `#3` |
 | BR-04 | Clone copies all attributes except barcode and stock | C | `#4` |
 | BR-05 | Order number `ORD-YYYYMMDD-NNN` | C (format), I (daily reset) | `#16` |
-| BR-06 | Discount: none, flat Rs, or percentage, per bill | C | `#T` |
+| BR-06 | Discount: none, flat Rs, or percentage, per bill; each item may also have its own (D-27) | C, D-27 | `#T` |
 | BR-07 | Bill GST is optional per bill, rate editable, default 18% | C | `#44` |
 | BR-08 | Product tax rate is per product; the default is unclear | C/Q5 | `#2`, `#3` |
 | BR-09 | Six payment methods, one per bill (split payment not seen) | C/Q10 | `#43` |
@@ -335,6 +338,8 @@ relevance, pagination and backend entities. "Real-time" and "pagination" entries
 | BR-22 | A product may have a separate box price; selling a box deducts pieces-per-box from stock | D-17 | Owner |
 | BR-23 | Bills and khata entries are archived, never deleted | D-12 | Owner |
 | BR-24 | Stock decreases other than sales require an admin and a reason | D-18 | Owner |
+| BR-25 | Item discounts come off first; the overall discount comes off what is left; taxes come after both | D-27, Q39 | Owner |
+| BR-26 | A product, customer, vendor or staff account can be deleted only if no bill, khata entry or recorded work depends on it | D-28 | Owner |
 
 ---
 
@@ -382,6 +387,11 @@ Status for every row: **Not started**.
 | F-35 | **New:** archive view for old bills and khata entries | D-12 | Must |
 | F-36 | **New:** migration of all old data via an owner-run script | D-21 | Must |
 | F-37 | **New:** connection banner; billing disabled while offline | D-05 | Must |
+| F-38 | **New:** terminal product list view (Product, Stock, Price, three lists side by side, a tap on a row adds it) with a Card/List dropdown | Owner, 2026-11-08 and 2026-11-09 | Must |
+| F-39 | **New:** a discount on specific items of a bill, next to the overall discount | D-27 | Must |
+| F-40 | **New:** regenerate a customer's bill from their khata | Owner, 2026-11-08 | Must |
+| F-41 | **New:** Delete on the products, low stock, customers, vendors and staff pages (categories already had it) | D-28 | Must |
+| F-42 | **New:** imports create missing categories; exports carry each product's category | D-29 | Must |
 
 ---
 
@@ -401,7 +411,7 @@ Q13 → D-23 · Q15 → D-18 · Q16 → D-19 (clone only) · Q17 → D-22 (scope
 | Q7b | Refund money and limits | Refund by the original method; Udhaar refunds credit the khata (A-03); reason optional; no time limit |
 | Q10b | Split payments, cash tendered and change | One method per bill as today; optional "cash received → change" display |
 | Q14 | Import template columns; insert versus update | Match by barcode: update if found, insert if not; row-level error report |
-| Q16b | Product and category delete; barcode uniqueness | Products with sales are archived, not deleted; deleting a category moves its products to Uncategorised; barcodes unique when present |
+| Q16b | Product and category delete; barcode uniqueness | Products on past bills are archived, not deleted; a product never sold can be deleted (D-28); deleting a category moves its products to Uncategorised; barcodes unique when present |
 | Q17b | Data sent to Groq; key ownership | Aggregates and product names only, never customer names or phones; one shop key in Settings |
 | Q18 | Dashboard definitions | Time zone Asia/Karachi; week starts Monday; highest/least selling over the last 30 days; "Today's Orders" counts completed bills, including partly refunded ones |
 | Q19 | Inventory tiles show ≈ Rs 1.06 bn / Rs 537 m | Migration report lists products with implausible stock or prices for the owner to fix |
@@ -420,8 +430,10 @@ Q13 → D-23 · Q15 → D-18 · Q16 → D-19 (clone only) · Q17 → D-22 (scope
 | Q34 | Maximum lines on one bill | 100 |
 | Q35 | Duplicate active barcodes found during migration | Dry-run lists them; by default the first product keeps the barcode, later ones keep it as `legacy_barcode` with an empty barcode, for the owner to fix |
 | Q36 | "Least Selling" list: include products with no sales? | Only products sold in the period (net units > 0), lowest first; otherwise the list fills with never-sold items in name order. Never-sold stock is a separate question for the owner |
-| Q37 | Import template columns; an unknown category in a row | Columns: Barcode, Name, Urdu name, Category, Base unit, Pieces per box, Sale price, Box price, Cost price, Tax rate %, Low stock threshold, Threshold unit, Opening stock (only Name and Sale price required). An unknown category fails its row; imports never create categories. A barcode repeated in one file fails the later row |
+| Q37 | Import template columns; an unknown category in a row | Columns: Barcode, Name, Urdu name, Category, Base unit, Pieces per box, Sale price, Box price, Cost price, Tax rate %, Low stock threshold, Threshold unit, Opening stock (only Name and Sale price required). A category the shop does not have yet is created (D-29, which replaced "an unknown category fails its row"); names match ignoring case and the first spelling in the file wins; a refused row creates nothing. A barcode repeated in one file fails the later row |
 | Q38 | AI defaults the old app leaves open (F-29) | Purchase recommendations use the 45-day sales rate to cover the next 30 days: `piecesFor30Days` = rate × 30 − stock, and estimated cost = that × cost price (none without a cost price). Discount advice looks at products in stock by their last 30 days of sales. The Daily report covers today, Weekly the last 7 days and Monthly the last 30 days, each ending today. Chat history is not stored. Answers are cached for 15 minutes (a "Saved answer" badge says so) |
+| Q39 | How item discounts work (D-27) | Same kinds as the overall discount: flat Rs or percentage. A flat amount comes off the item's whole line, not each unit. Item discounts come off first and the overall discount applies to what is left, so its percentage or flat limit uses that amount (Rs 1,000 with 10 % off + Rs 500, then 10 % overall: 100, then 140 of the remaining 1,400, total Rs 1,260). Taxes are charged after both (D-08). Custom items can have one too. Needs `sales:discount`, like the overall discount |
+| Q40 | Which bills a khata can regenerate (F-40) | Bills linked to the customer: their Udhaar bills. Cash and other bills are not linked to a customer at the counter, so they are reprinted from order history by bill number. The bill is rebuilt from what was stored, so a later price change or refund does not alter it |
 
 **Proposed additions (not in the old app; build only if the owner agrees)**
 
@@ -485,4 +497,9 @@ results, compliance audit, limitations). Infrastructure phases 1–6 are tracked
 | F-30 | Groq key management | F-04 | 12 | COMPLETE | [F-30](docs/progress/F-30.md) |
 | F-29 | AI Assistant (6 features) | F-07, F-30 | 12 | COMPLETE | [F-29](docs/progress/F-29.md) |
 | F-36 | Legacy data migration | all data features, Q27 | 13 | BLOCKED (needs old schema, Q27) | — |
+| F-38 | Terminal list view | F-18 | Owner update | COMPLETE | [F-38](docs/progress/F-38.md) |
+| F-39 | Item discount | F-20 | Owner update | COMPLETE | [F-39](docs/progress/F-39.md) |
+| F-40 | Regenerate a customer's bill | F-23, F-25 | Owner update | COMPLETE | [F-40](docs/progress/F-40.md) |
+| F-41 | Delete (safe delete) | F-08, F-25, F-26, F-31 | Owner update | COMPLETE | [F-41](docs/progress/F-41.md) |
+| F-42 | Imports create categories | F-11, F-12 | Owner update | COMPLETE | [F-42](docs/progress/F-42.md) |
 | F-14, F-17, F-24, F-27 | Replaced or dropped (D-23, D-12, D-03) | — | — | Not applicable | — |

@@ -420,7 +420,7 @@ this table is updated then.
   once Redis is ready and caps shutdown at 5 s. With the Nest wrapper, an API started while Redis was down
   never finished shutting down (found by `schema:emit`, which boots without Redis).
 - **Staging before queueing (ADR-020):** rows are validated at upload. A repeated barcode, a bad cell and an
-  unknown category (Q37) fail their row; the rest run in batches of 100, one transaction each, falling back
+  unknown category (Q37, since replaced by ADR-047) fail their row; the rest run in batches of 100, one transaction each, falling back
   to row by row if the database refuses a batch. Only `PENDING` rows are read, so retries never apply a
   row twice. Products are written by the catalogue's `ProductImportService` (one owner of product writes);
   stock is set only for new products (BR-03); one `catalog.bulkChanged` replaces per-product events.
@@ -558,6 +558,36 @@ exposed, and keep it out of source control. Existing admin staff management rema
 - **Consequences:** the fork is a mirror, and commits made only there are replaced. The workflow does not wait
   for Render, so the web app can go live a few minutes before the API. `FORK_SYNC_TOKEN` must stay limited to
   the fork.
+
+### ADR-045 Item discounts are part of each line's discount (2026-11-08)
+- **Decision (D-27):** `line_discount` keeps meaning "everything taken off this line", now the item's own
+  discount plus its share of the overall one. New columns `order_lines.item_discount` and
+  `orders.item_discount_total` record how much of it was the item's own.
+- **Why:** every total, CHECK, report and the refund maths work from `line_discount`, `line_net` and
+  `discount_total`, so none of them changes, and a refund pays back the discounted price without new rules.
+  The dashboard's discount figures include item discounts automatically.
+- **Consequences:** `orders_discount_ck` had to change, because a bill with no overall discount can now have
+  a non-zero `discount_total`. It still refuses anything that is not an item discount.
+
+### ADR-046 Safe delete: only what nothing depends on (2026-11-08)
+- **Decision (D-28), chosen by the owner over deleting history:** `deleteProduct`, `deleteCustomer`,
+  `deleteVendor` and `deleteStaffUser` remove the row from the database when no bill, khata entry or recorded
+  work depends on it, and answer `HAS_HISTORY` otherwise. Archive and Disable stay for everything else. Bills and
+  khata entries have no delete at all (D-12).
+- **What goes with a row:** a product takes its stock movements and the import rows that created it, which are
+  working data; its clones stay, unlinked. A staff account takes its sessions; its sign-in logs stay without the
+  name. Any other audited action counts as work, so the log never loses who changed something.
+- **Races:** deleting a product takes its row lock, the same lock a sale takes, so one of the two always sees the
+  other. Customers and vendors rely on their version and on foreign keys, which stay `RESTRICT`.
+- **Permissions:** the existing archive permissions (admins only), so no role changes.
+
+### ADR-047 Imports create categories (2026-11-08)
+- **Decision (D-29), replacing part of Q37 and ADR-040:** the upload creates the categories its good rows name,
+  in the same transaction as the staged job, so "first categories, then products" holds and a refused row or a
+  failed upload leaves no category behind. `createMany` with `skipDuplicates` lets two uploads race safely on
+  the citext unique name.
+- **Consequences:** a mistyped category name now creates a category instead of failing its row. New categories
+  reach other screens with the `catalog.bulkChanged` at the end of the import.
 
 ## 3. Unresolved decisions (owner input needed; defaults apply until answered)
 

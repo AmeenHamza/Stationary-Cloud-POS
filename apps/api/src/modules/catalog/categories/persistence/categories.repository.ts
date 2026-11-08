@@ -81,6 +81,15 @@ export class CategoriesRepository {
     return this.db.client.category.create({ data, select: CATEGORY_SELECT });
   }
 
+  /** Creates categories by name for an import; a name another request just took is skipped. */
+  async insertNames(names: readonly string[]): Promise<number> {
+    const created = await this.db.client.category.createMany({
+      data: names.map((name) => ({ name })),
+      skipDuplicates: true,
+    });
+    return created.count;
+  }
+
   /** Optimistic update: a stale `version` matches no row (Prisma P2025 → CONFLICT). */
   update(id: string, version: number, data: CategoryData): Promise<CategoryRow> {
     return this.db.client.category.update({

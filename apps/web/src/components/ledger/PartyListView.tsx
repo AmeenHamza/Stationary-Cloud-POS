@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { CursorPager, type PagedConnection } from '@/components/data/CursorPager';
 import { EmptyState } from '@/components/data/EmptyState';
+import { DeleteConfirm } from '@/components/feedback/DeleteConfirm';
 import { ToggleField } from '@/components/forms/ToggleField';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { userMessageOf } from '@/lib/errors/graphql-error';
 import { PartyTable } from './PartyTable';
 
 import type { BalanceLabels, PartySummary } from './khata-labels';
+import type { PartyDeletion } from './usePartyDeletion';
 import type { CursorPages } from '@/hooks/useCursorPages';
 
 export interface PartyListFilter {
@@ -84,6 +86,7 @@ export function PartyListView({
   labels,
   detailHeading,
   onOpen,
+  deletion,
 }: {
   noun: string;
   connection: (PagedConnection & { nodes: readonly PartySummary[] }) | undefined;
@@ -94,6 +97,7 @@ export function PartyListView({
   labels: BalanceLabels;
   detailHeading?: string;
   onOpen: (party: PartySummary) => void;
+  deletion?: PartyDeletion;
 }) {
   return (
     <div className="grid gap-4">
@@ -113,10 +117,14 @@ export function PartyListView({
               labels={labels}
               onOpen={onOpen}
               {...(detailHeading === undefined ? {} : { detailHeading })}
+              {...(deletion === undefined ? {} : { onDelete: deletion.control.ask })}
             />
           </div>
           <CursorPager pages={pages} connection={connection} />
         </div>
+      )}
+      {deletion !== undefined && (
+        <DeleteConfirm control={deletion.control} description={deletion.description} />
       )}
     </div>
   );

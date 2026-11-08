@@ -90,4 +90,26 @@ export class ProductsRepository {
       select: PRODUCT_SELECT,
     });
   }
+
+  /** Whether any bill line sold this product; bills are kept for good (D-12). */
+  async isOnBills(id: string): Promise<boolean> {
+    const line = await this.db.client.orderLine.findFirst({
+      where: { productId: id },
+      select: { id: true },
+    });
+    return line !== null;
+  }
+
+  /**
+   * Removes a product no bill references (D-28) with its stock ledger and the import rows that
+   * created it, which are only working data, kept 30 days anyway (the job keeps its counts). Its
+   * clones are products in their own right, so they stay, without the link.
+   */
+  async deleteNeverSold(id: string): Promise<void> {
+    const client = this.db.client;
+    await client.stockMovement.deleteMany({ where: { productId: id } });
+    await client.importJobRow.deleteMany({ where: { productId: id } });
+    await client.product.updateMany({ where: { clonedFromId: id }, data: { clonedFromId: null } });
+    await client.product.delete({ where: { id }, select: { id: true } });
+  }
 }

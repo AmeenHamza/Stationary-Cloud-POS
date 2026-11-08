@@ -17,6 +17,7 @@ const REQUIRED = ['name', 'salePrice'] as const;
 type ImportField = (typeof IMPORT_COLUMNS)[number]['field'];
 const LEGACY_HEADERS: Partial<Record<ImportField, readonly string[]>> = {
   nameUrdu: ['name_urdu'],
+  categoryName: ['category_name'],
   salePrice: ['price'],
   costPrice: ['cost'],
   openingStock: ['stock'],

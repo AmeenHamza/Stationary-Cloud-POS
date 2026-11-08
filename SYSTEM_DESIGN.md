@@ -87,7 +87,7 @@ cached **before** revocation, at most 300 s, and the tombstone closes it as soon
   `ROLE_PERMISSIONS[role]` from `@pos/contracts`, and refuses handlers without a policy.
 - **Field-level:** `Product.costPrice` needs `catalog:write`; `ShopSettings.aiKeyConfigured`/`aiKeyLast4`
   need `settings:write`. A cashier requesting them gets `FORBIDDEN` for that field.
-- **Argument-level:** a `createSale` discount other than `NONE` needs `sales:discount`.
+- **Argument-level:** a `createSale` discount other than `NONE`, overall or on an item, needs `sales:discount`.
 - The web UI hides actions with `useCan()`, which is only a convenience. The API always decides.
 
 ### 2.5 WebSocket authentication
@@ -109,9 +109,13 @@ cached **before** revocation, at most 300 s, and the tombstone closes it as soon
 
 ### 3.1 Cart and preview (client)
 
-- `CartProvider` (`features/terminal/state`) holds `lines: { productId, unit, quantity }[]`, discount and
-  Bill GST input, payment method and customer. Prices are **not** stored in the cart; the preview reads
-  current product fields from the Apollo cache, which events keep current.
+- `CartProvider` (`features/terminal/state`) holds `lines: { productId, unit, quantity, discount? }[]`, the
+  overall discount and Bill GST input, payment method and customer. Prices are **not** stored in the cart; the
+  preview reads current product fields from the Apollo cache, which events keep current. A product deleted
+  while in the cart leaves it (D-28).
+- The product picker shows the same server page as cards or as up to three lists side by side, where a tap on
+  a row adds it (F-38); the choice is remembered per
+  browser in `pos:terminal:product-view`.
 - `useCartPreview()` calls `calculateBill()` from `@pos/domain`, the same function the API uses (ADR-013).
 - Barcode: the search input keeps focus. On `Enter`, `productByBarcode(text)` runs; a match adds one unit
   (Q22 default); no match falls back to name search.
@@ -129,9 +133,12 @@ product rows on the server.
 1. `lineGross_i = unitPrice_i × quantity_i`, where unit price is `sale_price` for `PIECE` and `box_price` for
    `BOX` (D-17).
 2. `subtotal = Σ lineGross_i`.
-3. `discountTotal` = `0` (NONE) | `amount` (FLAT; must be ≤ subtotal) | `round2(subtotal × percent / 100)` (PERCENT).
-4. Allocate `discountTotal` to lines in proportion to `lineGross` using the largest-remainder method in paisa
-   (ties go to the lower line number), so `Σ lineDiscount_i = discountTotal` exactly (A-01).
+3. `itemDiscount_i` (D-27) = `0` (NONE) | `amount` (FLAT; must be ≤ `lineGross_i`) | `round2(lineGross_i × percent / 100)`
+   (PERCENT). `left_i = lineGross_i − itemDiscount_i`; `itemDiscountTotal = Σ itemDiscount_i`.
+4. `billDiscountTotal` = `0` (NONE) | `amount` (FLAT; must be ≤ `Σ left_i`) | `round2(Σ left_i × percent / 100)` (PERCENT).
+   Allocate it to lines in proportion to `left_i` using the largest-remainder method in paisa (ties go to the
+   lower line number), so the shares sum to it exactly (A-01). `lineDiscount_i = itemDiscount_i + share_i`, and
+   `discountTotal = itemDiscountTotal + billDiscountTotal = Σ lineDiscount_i`.
 5. `lineNet_i = lineGross_i − lineDiscount_i`.
 6. `lineTax_i = round2(lineNet_i × taxRate_i / 100)`; `productTaxTotal = Σ lineTax_i` (D-07, D-08).
 7. `billGstAmount = applied ? round2((Σ lineNet_i + productTaxTotal) × rate / 100) : 0` (D-25).
@@ -216,9 +223,10 @@ Rules:
 (`@page { size: 80mm auto; margin: 0 }`, 72 mm content width). It awaits `document.fonts.ready`, then calls
 `window.print()`. Counter PCs use Chrome `--kiosk-printing` for silent printing (DEPLOYMENT.md §9).
 Receipt content (Q6b default): shop name, address, phone, bill number, date and time, cashier, lines
-(name, qty × unit price, line total), subtotal, discount, product tax, Bill GST with rate, total, payment
-method, and for Udhaar the customer name and new balance, then the footer. Reprint: `orderReceipt(orderId)`
-from Order History.
+(name, qty × unit price, line total, any item discount), subtotal, item discount, discount, product tax, Bill
+GST with rate, total, payment method, and for Udhaar the customer name and the balance after this bill, then
+the footer. Reprint: `orderReceipt(orderId)` from Order History, or "Regenerate bill" on a credit-sale row of
+the customer's khata (F-40). Both rebuild the bill from what was stored, so later price changes do not alter it.
 
 ### 3.6 Refunds
 
@@ -490,9 +498,10 @@ to one field are rejected. `stock` is opening stock for new products only. Prese
 source file, including leading zeros; spreadsheet formatting cannot recover digits already lost.
 
 `POST /v1/imports/products` → parse (`exceljs` / `csv-parse`), max 5,000 rows → validate each
-row with the Zod import schema → insert `import_jobs` (`QUEUED`) and `import_job_rows` (`PENDING`, or `FAILED`
-with a message) → enqueue → `202`. A row fails at staging when a cell is invalid, its barcode repeats an
-earlier line, or its category does not exist (imports never create categories, Q37). The worker sets `RUNNING` and processes batches of 100 `PENDING` rows, one
+row with the Zod import schema → in one transaction create the categories the good rows name (D-29) and insert
+`import_jobs` (`QUEUED`) and `import_job_rows` (`PENDING`, or `FAILED` with a message) → enqueue → `202`. A row
+fails at staging when a cell is invalid or its barcode repeats an earlier line; a refused row creates no
+category. Names match ignoring case, and the first spelling in the file wins. The worker sets `RUNNING` and processes batches of 100 `PENDING` rows, one
 transaction each (if the database refuses a batch, its rows are re-run one by one so a bad row fails
 alone). It matches by barcode (Q14 default): if found, it updates attributes (stock is ignored for
 existing products, BR-03); if not, it inserts with an `OPENING` movement for the stock column. It then
@@ -565,10 +574,10 @@ headers at all; SEC-07).
 
 ### 9.3 Audit actions (`modules/audit/application/audit-actions.ts`)
 `auth.loginSucceeded`, `auth.loginFailed`, `auth.logout`, `auth.passwordChanged`, `auth.allSessionsRevoked`, `staff.created`,
-`staff.updated`, `staff.statusChanged`, `staff.passwordReset`, `settings.updated`, `settings.aiKeySet`,
-`settings.aiKeyCleared`, `settings.aiKeyReencrypted`, `category.created|updated|deleted`, `product.created|updated|cloned|archived|restored`,
-`stock.restocked`, `stock.adjusted`, `sale.refunded`, `customer.created|updated|archived|restored`,
-`customer.creditAdded`, `customer.paymentReceived`, `vendor.created|updated|archived|restored`,
+`staff.updated`, `staff.statusChanged`, `staff.passwordReset`, `staff.deleted`, `settings.updated`, `settings.aiKeySet`,
+`settings.aiKeyCleared`, `settings.aiKeyReencrypted`, `category.created|updated|deleted`, `product.created|updated|cloned|archived|restored|deleted`,
+`stock.restocked`, `stock.adjusted`, `sale.refunded`, `customer.created|updated|archived|restored|deleted`,
+`customer.creditAdded`, `customer.paymentReceived`, `vendor.created|updated|archived|restored|deleted`,
 `vendor.purchaseAdded`, `vendor.paymentMade`, `catalog.importStarted`, `catalog.importCompleted`,
 `catalog.exported`, `ai.requested`. Sales are not separately audited: the order row is the record.
 

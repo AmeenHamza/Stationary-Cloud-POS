@@ -1,10 +1,21 @@
 import type { DiscountType, PaymentMethod, SaleUnit } from '@pos/contracts';
 
+/** A discount as typed, overall or on one item (D-27): only the value matching `type` is used. */
+export interface CartDiscount {
+  type: DiscountType;
+  amount: string;
+  percent: string;
+}
+
+export const NO_DISCOUNT: CartDiscount = { type: 'NONE', amount: '', percent: '' };
+
 /** One cart line: no prices, which the preview reads from the live cache (SYSTEM_DESIGN.md §3.1). */
 export interface CartLine {
   productId: string;
   unit: SaleUnit;
   quantity: number;
+  /** A discount on this item alone (D-27). */
+  discount?: CartDiscount;
 }
 
 export interface CustomCartLine {
@@ -14,12 +25,13 @@ export interface CustomCartLine {
   quantity: number;
   unitPrice: string;
   taxRate: string;
+  discount?: CartDiscount;
 }
 
 export interface CartState {
   lines: CartLine[];
   customLines: CustomCartLine[];
-  discount: { type: DiscountType; amount: string; percent: string };
+  discount: CartDiscount;
   /** `rate` null means the shop's default Bill GST rate (Q26). */
   billGst: { applied: boolean; rate: string | null };
   paymentMethod: PaymentMethod;
@@ -39,6 +51,7 @@ export type CartAction =
   /** Every line of products the server says are no longer for sale. */
   | { type: 'removeProducts'; productIds: readonly string[] }
   | { type: 'setDiscount'; discount: CartState['discount'] }
+  | { type: 'setLineDiscount'; productId: string; unit: SaleUnit; discount: CartDiscount }
   | { type: 'setBillGst'; billGst: CartState['billGst'] }
   | { type: 'setPaymentMethod'; paymentMethod: PaymentMethod }
   | { type: 'setCustomer'; customer: CartState['customer'] }
@@ -47,7 +60,7 @@ export type CartAction =
 export const EMPTY_CART: CartState = {
   lines: [],
   customLines: [],
-  discount: { type: 'NONE', amount: '', percent: '' },
+  discount: NO_DISCOUNT,
   billGst: { applied: false, rate: null },
   paymentMethod: 'CASH',
   customer: null,

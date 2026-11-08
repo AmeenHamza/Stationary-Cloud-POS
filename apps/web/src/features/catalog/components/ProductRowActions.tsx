@@ -8,6 +8,7 @@ import {
   PackagePlusIcon,
   PencilIcon,
   SlidersHorizontalIcon,
+  Trash2Icon,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -21,9 +22,10 @@ import {
 
 import type { CatalogProduct } from '../product';
 
-export type ProductAction = 'edit' | 'clone' | 'restock' | 'adjust' | 'archive' | 'restore';
+export type ProductAction =
+  'edit' | 'clone' | 'restock' | 'adjust' | 'archive' | 'restore' | 'delete';
 
-/** Row menu of the product tables. Archived products can only be edited or restored. */
+/** Row menu of the product tables. Archived products can only be edited, restored or deleted. */
 export function ProductRowActions({
   product,
   onAction,
@@ -69,6 +71,9 @@ export function ProductRowActions({
             <ArchiveIcon /> Archive
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem variant="destructive" onSelect={item('delete')}>
+          <Trash2Icon /> Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

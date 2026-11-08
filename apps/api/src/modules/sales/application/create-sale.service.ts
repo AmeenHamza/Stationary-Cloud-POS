@@ -16,6 +16,7 @@ import { OrdersRepository } from '../persistence/orders.repository';
 import {
   billLineInputs,
   customLinesOf,
+  givesDiscount,
   orderLinesData,
   outOfStockNames,
 } from './create-sale.lines';
@@ -32,6 +33,7 @@ function stored(bill: BillResult) {
   return {
     subtotal: toMoneyString(bill.subtotal),
     discountTotal: toMoneyString(bill.discountTotal),
+    itemDiscountTotal: toMoneyString(bill.itemDiscountTotal),
     productTaxTotal: toMoneyString(bill.productTaxTotal),
     billGstRate: bill.billGstRate === null ? null : toMoneyString(bill.billGstRate),
     billGstAmount: toMoneyString(bill.billGstAmount),
@@ -66,7 +68,7 @@ export class CreateSaleService {
   ) {}
 
   execute(input: CreateSaleInput, viewer: Principal) {
-    if (input.discount.type !== 'NONE' && !hasPermission(viewer.role, 'sales:discount')) {
+    if (givesDiscount(input) && !hasPermission(viewer.role, 'sales:discount')) {
       throw new AppError('FORBIDDEN', 'You may not give discounts.');
     }
     if (input.paymentMethod === 'UDHAAR' && input.customerId === null) {

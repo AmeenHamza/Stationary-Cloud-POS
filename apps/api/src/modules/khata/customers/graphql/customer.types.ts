@@ -32,6 +32,12 @@ export class CustomerLedgerEntry extends LedgerEntryFields {
   @Field(() => ID, { nullable: true, description: 'The Udhaar bill (CREDIT_SALE).' })
   orderId!: string | null;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'That bill number, to regenerate it (F-40).',
+  })
+  billNumber!: string | null;
+
   @Field(() => ID, { nullable: true, description: 'The refund (REFUND_CREDIT, A-03).' })
   refundId!: string | null;
 }

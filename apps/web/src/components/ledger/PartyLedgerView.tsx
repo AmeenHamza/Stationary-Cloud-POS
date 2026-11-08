@@ -31,6 +31,7 @@ export function PartyLedgerView({
   includeArchived,
   onIncludeArchived,
   typeLabels,
+  rowAction,
 }: {
   party: PartySummary;
   labels: BalanceLabels;
@@ -42,6 +43,7 @@ export function PartyLedgerView({
   includeArchived: boolean;
   onIncludeArchived: (value: boolean) => void;
   typeLabels: Readonly<Record<string, string>>;
+  rowAction?: (entry: LedgerEntry) => ReactNode;
 }) {
   return (
     <div className="grid gap-4">
@@ -74,7 +76,12 @@ export function PartyLedgerView({
       {ledger !== undefined && ledger.nodes.length > 0 && (
         <div>
           <div className="rounded-xl border bg-card">
-            <LedgerTable entries={ledger.nodes} typeLabels={typeLabels} balanceHeading="Balance" />
+            <LedgerTable
+              entries={ledger.nodes}
+              typeLabels={typeLabels}
+              balanceHeading="Balance"
+              {...(rowAction === undefined ? {} : { rowAction })}
+            />
           </div>
           <CursorPager pages={pages} connection={ledger} />
         </div>

@@ -15,6 +15,7 @@ import { saleInputOf } from '../state/sale-input';
 
 import { BillGstField } from './BillGstField';
 import { DiscountField } from './DiscountField';
+import { ItemDiscountField } from './ItemDiscountField';
 import { PaymentMethodPicker } from './PaymentMethodPicker';
 import { TotalsSummary } from './TotalsSummary';
 
@@ -55,7 +56,12 @@ export function PaymentDialog({
               {preview.entryError}
             </p>
           )}
-          {canDiscount && <DiscountField />}
+          {canDiscount && (
+            <div className="grid gap-3">
+              <DiscountField />
+              <ItemDiscountField preview={preview} />
+            </div>
+          )}
           <BillGstField rate={preview.gstRate} />
           <PaymentMethodPicker />
           {!online && (

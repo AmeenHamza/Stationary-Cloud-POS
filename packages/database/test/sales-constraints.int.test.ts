@@ -56,6 +56,48 @@ describe('sales constraints (DATABASE.md §4.9–4.12)', () => {
     await rejects(order({ discount_type: "'PERCENT'", discount_value: '101' }));
   });
 
+  it('lets item discounts stand alone, and nothing else without a discount type (D-27)', async () => {
+    const onItems = {
+      discount_total: '40',
+      item_discount_total: '40',
+      subtotal: '240',
+      bill_gst_rate: 'NULL',
+      bill_gst_amount: '0',
+      total: '200',
+    };
+    await querySql(db.url, order(onItems));
+    await rejects(order({ ...onItems, item_discount_total: '30' }));
+    await rejects(
+      order({
+        ...onItems,
+        discount_type: "'FLAT'",
+        discount_value: '10',
+        item_discount_total: '50',
+      }),
+    );
+    await querySql(
+      db.url,
+      order({
+        ...onItems,
+        discount_type: "'FLAT'",
+        discount_value: '10',
+        item_discount_total: '30',
+      }),
+    );
+  });
+
+  it('keeps a line item discount within what the line was discounted', async () => {
+    const id = crypto.randomUUID();
+    await querySql(db.url, order({ id: `'${id}'` }));
+    const line = (no: number, itemDiscount: string) =>
+      `INSERT INTO order_lines (order_id, line_no, product_name, sale_unit, pieces_per_unit, quantity,
+         unit_price, tax_rate, line_gross, item_discount, line_discount, line_net, line_tax)
+       VALUES ('${id}', ${String(no)}, 'Pen', 'PIECE', 1, 1, 100, 0, 100, ${itemDiscount}, 20, 80, 0)`;
+    await querySql(db.url, line(1, '20'));
+    await rejects(line(2, '20.01'));
+    await rejects(line(3, '-1'));
+  });
+
   it('keeps the status in step with the refunded total', async () => {
     await rejects(order({ status: "'REFUNDED'", refunded_total: '100' }));
     await rejects(order({ status: "'COMPLETED'", refunded_total: '10' }));

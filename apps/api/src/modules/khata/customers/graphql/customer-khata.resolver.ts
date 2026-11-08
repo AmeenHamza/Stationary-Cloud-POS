@@ -64,4 +64,13 @@ export class CustomerKhataResolver {
   ): Promise<types.Customer> {
     return this.service.restore(id, viewer);
   }
+
+  @Mutation(() => Boolean, { description: 'Only with no bills or entries (HAS_HISTORY, D-28).' })
+  @RequirePermission('customers:archive')
+  deleteCustomer(
+    @Args('id', { type: () => ID }, new ZodValidationPipe(schemas.idSchema)) id: string,
+    @CurrentViewer() viewer: Principal,
+  ): Promise<boolean> {
+    return this.service.delete(id, viewer);
+  }
 }

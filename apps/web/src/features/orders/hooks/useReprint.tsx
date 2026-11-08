@@ -11,7 +11,10 @@ import { OrderReceiptDocument } from '../graphql/orders.documents';
 
 import type { ReceiptFieldsFragment as Receipt } from '@/graphql/__generated__/graphql';
 
-/** Reprint from order history (SYSTEM_DESIGN.md §3.5): `orderReceipt`, then the 80 mm print. */
+/**
+ * Reprint from order history or a customer's khata (SYSTEM_DESIGN.md §3.5, F-40): `orderReceipt`,
+ * then the 80 mm print. Built from the stored bill, so it shows exactly what was charged.
+ */
 export function useReprint() {
   const client = useApolloClient();
   const [printing, setPrinting] = useState<{ receipt: Receipt; count: number } | null>(null);

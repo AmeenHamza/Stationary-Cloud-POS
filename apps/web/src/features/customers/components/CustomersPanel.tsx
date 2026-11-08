@@ -15,6 +15,7 @@ import {
   CustomerKpisDocument,
   CustomersDocument,
 } from '../graphql/customers.documents';
+import { useDeleteCustomer } from '../hooks/useDeleteCustomer';
 
 /**
  * Customer list with search and Add customer (F-25). Used by the admin Customers page and the
@@ -32,6 +33,7 @@ export function CustomersPanel({
   const { data, error } = useQuery(CustomersDocument, { variables: list.variables });
   const { data: kpis } = useQuery(CustomerKpisDocument, showKpis ? undefined : skipToken);
   const [create] = useMutation(CreateCustomerDocument, { refetchQueries: ['Customers'] });
+  const deletable = useDeleteCustomer(showKpis);
   return (
     <>
       <PartyPanelHeader
@@ -52,6 +54,7 @@ export function CustomersPanel({
       />
       <PartyListView
         {...list.view}
+        {...deletable}
         noun="customer"
         connection={data?.customers}
         error={error}

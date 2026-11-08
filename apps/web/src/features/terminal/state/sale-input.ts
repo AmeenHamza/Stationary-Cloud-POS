@@ -1,11 +1,23 @@
 import { toMoneyString } from '@pos/domain';
 
 import type { CartPreview } from './cart-preview';
-import type { CartState } from './cart.types';
-import type { CreateSaleInput } from '@/graphql/__generated__/graphql';
+import type { CartDiscount, CartState } from './cart.types';
+import type { CreateSaleInput, DiscountInput } from '@/graphql/__generated__/graphql';
+
+/** The value matching the type, as the API expects it. */
+function discountInput({ type, amount, percent }: CartDiscount): DiscountInput {
+  return type === 'FLAT' ? { type, amount } : type === 'PERCENT' ? { type, percent } : { type };
+}
+
+/** An item's discount, left out when it has none (D-27). */
+function lineDiscount(discount: CartDiscount | undefined): { discount?: DiscountInput } {
+  return discount === undefined || discount.type === 'NONE'
+    ? {}
+    : { discount: discountInput(discount) };
+}
 
 /**
- * The `createSale` input for a priced cart: lines without prices, the discount and Bill GST as
+ * The `createSale` input for a priced cart: lines without prices, the discounts and Bill GST as
  * entered, and the previewed total as `expectedTotal` (PRICE_CHANGED if the server's differs).
  * Null while the cart cannot be sold (loading, unsellable line, invalid entry, no Udhaar customer).
  */
@@ -18,19 +30,23 @@ export function saleInputOf(
   if (preview.bill === null || (udhaar && cart.customer === null)) {
     return null;
   }
-  const { type, amount, percent } = cart.discount;
   return {
     idempotencyKey,
-    lines: cart.lines.map(({ productId, unit, quantity }) => ({ productId, unit, quantity })),
-    customLines: cart.customLines.map(({ name, unit, quantity, unitPrice, taxRate }) => ({
+    lines: cart.lines.map(({ productId, unit, quantity, discount }) => ({
+      productId,
+      unit,
+      quantity,
+      ...lineDiscount(discount),
+    })),
+    customLines: cart.customLines.map(({ name, unit, quantity, unitPrice, taxRate, discount }) => ({
       name: name.trim() === '' ? 'Custom item' : name.trim(),
       unit,
       quantity,
       unitPrice,
       taxRate,
+      ...lineDiscount(discount),
     })),
-    discount:
-      type === 'FLAT' ? { type, amount } : type === 'PERCENT' ? { type, percent } : { type },
+    discount: discountInput(cart.discount),
     billGst: cart.billGst.applied ? { applied: true, rate: preview.gstRate } : { applied: false },
     paymentMethod: cart.paymentMethod,
     customerId: udhaar ? (cart.customer?.id ?? null) : null,

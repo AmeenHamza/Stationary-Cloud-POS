@@ -28,7 +28,10 @@ export function safeText(value: string | null): string | null {
 const money = (value: { toString: () => string } | null): string | null =>
   value === null ? null : moneyText(value);
 
-/** The product export uses the import template's headers, so an edited export imports again. */
+/**
+ * The product export uses the import template's headers, so an edited export imports again: its
+ * Category column names each product's category, and an import creates any that is missing (D-29).
+ */
 export const PRODUCT_COLUMNS: readonly ExportColumn[] = [
   { header: 'Barcode', width: 16, inPdf: true, value: (p) => safeText(p.barcode) },
   { header: 'Name', width: 36, inPdf: true, value: (p) => safeText(p.name) },

@@ -7,7 +7,7 @@ import { useCart } from '../state/CartProvider';
 
 import type { DiscountType } from '@pos/contracts';
 
-const TYPES: readonly { value: DiscountType; label: string }[] = [
+export const DISCOUNT_TYPES: readonly { value: DiscountType; label: string }[] = [
   { value: 'NONE', label: 'No Discount' },
   { value: 'FLAT', label: 'Flat (Rs)' },
   { value: 'PERCENT', label: 'Percentage (%)' },
@@ -22,7 +22,7 @@ export function DiscountField() {
     <fieldset className="grid gap-2">
       <legend className="mb-2 text-sm font-medium">Discount</legend>
       <div className="flex flex-wrap gap-2">
-        {TYPES.map((type) => (
+        {DISCOUNT_TYPES.map((type) => (
           <Button
             key={type.value}
             type="button"

@@ -7,6 +7,7 @@ import {
   openPayment,
   printCount,
   processPayment,
+  scanBarcode,
   stockOf,
 } from '../fixtures/billing.fixture.js';
 import { seedProduct } from '../fixtures/catalog.fixture.js';
@@ -44,7 +45,7 @@ test('a cash sale with one scan and one search prints and clears the cart (E2E-0
   await expect(payment.getByTestId('payment-totals')).toContainText('TOTALRs 224.20');
   await processPayment(counter, payment);
   expect(await printCount(counter)).toBe(1);
-  await expect(counter.getByText('Tap a product to add it')).toBeVisible();
+  await expect(counter.getByText('Tap a product or add a custom item')).toBeVisible();
   expect(await stockOf(admin, pencil.id)).toBe(19);
   await admin.context().close();
   await counter.context().close();
@@ -117,10 +118,8 @@ test('a 3-line scan-based bill sends 3 lookups and 1 sale, nothing else (NET-07)
       sent.push(String((request.postDataJSON() as { operationName?: string }).operationName));
     }
   });
-  const search = counter.getByLabel('Search by name or scan barcode');
   for (const index of [1, 2, 3]) {
-    await search.fill(`89600000001${String(index)}`);
-    await search.press('Enter');
+    await scanBarcode(counter, `89600000001${String(index)}`);
     await expect(cartLine(counter, `Net Item ${String(index)}`)).toBeVisible();
   }
   await processPayment(counter, await openPayment(counter));

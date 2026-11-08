@@ -25,6 +25,30 @@ describe('sale inputs (API.md §10.2)', () => {
     expect(createSaleInputSchema.parse(sale())).toMatchObject({ customerId: null });
   });
 
+  it('takes a discount per line, with the value its type needs (D-27)', () => {
+    const line = (discount: unknown) => [{ productId: P1, unit: 'PIECE', quantity: 1, discount }];
+    const ok = (discount: unknown) =>
+      createSaleInputSchema.safeParse(sale({ lines: line(discount) })).success;
+    expect(ok({ type: 'FLAT', amount: '50' })).toBe(true);
+    expect(ok({ type: 'PERCENT', percent: '12.5' })).toBe(true);
+    expect(ok({ type: 'NONE' })).toBe(true);
+    expect(ok(null)).toBe(true);
+    expect(ok({ type: 'FLAT' })).toBe(false);
+    expect(ok({ type: 'PERCENT', percent: '101' })).toBe(false);
+    expect(ok({ type: 'FLAT', amount: '1.234' })).toBe(false);
+    const custom = {
+      name: 'Binding',
+      unit: 'PIECE',
+      quantity: 1,
+      unitPrice: '100',
+      taxRate: '0',
+      discount: { type: 'FLAT' },
+    };
+    expect(
+      createSaleInputSchema.safeParse(sale({ lines: [], customLines: [custom] })).success,
+    ).toBe(false);
+  });
+
   it('refuses empty or duplicate lines, bad quantities and incomplete discounts or GST', () => {
     const fails = (overrides: Record<string, unknown>) =>
       createSaleInputSchema.safeParse(sale(overrides)).success;

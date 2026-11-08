@@ -38,11 +38,14 @@ export const CUSTOMER_ENTRY_SELECT = {
   refundId: true,
   businessDate: true,
   createdAt: true,
+  order: { select: { billNumber: true } },
 } as const satisfies Prisma.CustomerLedgerEntrySelect;
 
-export type CustomerEntryRow = Prisma.CustomerLedgerEntryGetPayload<{
-  select: typeof CUSTOMER_ENTRY_SELECT;
-}>;
+/** A khata entry with the number of the bill it came from (null when it has none). */
+export type CustomerEntryRow = Omit<
+  Prisma.CustomerLedgerEntryGetPayload<{ select: typeof CUSTOMER_ENTRY_SELECT }>,
+  'order'
+> & { billNumber: string | null };
 
 /** `customers` and `customer_ledger_entries` (DATABASE.md §4.7–4.8) behind the shared khata store. */
 @Injectable()
@@ -124,13 +127,33 @@ export class CustomersRepository implements PartyStore<
       : { requestHash: row.requestHash, partyId: row.customerId };
   }
 
-  listEntries(partyId: string, window: LedgerWindow): Promise<CustomerEntryRow[]> {
-    return this.db.client.customerLedgerEntry.findMany({
+  async listEntries(partyId: string, window: LedgerWindow): Promise<CustomerEntryRow[]> {
+    const rows = await this.db.client.customerLedgerEntry.findMany({
       where: ledgerWhere('customerId', partyId, window),
       orderBy: [...LEDGER_ORDER],
       take: window.take,
       select: CUSTOMER_ENTRY_SELECT,
     });
+    return rows.map(({ order, ...row }) => ({ ...row, billNumber: order?.billNumber ?? null }));
+  }
+
+  async hasHistory(id: string): Promise<boolean> {
+    const entry = await this.db.client.customerLedgerEntry.findFirst({
+      where: { customerId: id },
+      select: { id: true },
+    });
+    if (entry !== null) {
+      return true;
+    }
+    const order = await this.db.client.order.findFirst({
+      where: { customerId: id },
+      select: { id: true },
+    });
+    return order !== null;
+  }
+
+  async delete(id: string, version: number): Promise<void> {
+    await this.db.client.customer.delete({ where: { id, version }, select: { id: true } });
   }
 
   countEntries(partyId: string, since: Date | null): Promise<number> {

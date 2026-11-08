@@ -7,15 +7,16 @@ import { useState } from 'react';
 import { CursorPager } from '@/components/data/CursorPager';
 import { EmptyState } from '@/components/data/EmptyState';
 import { NativeSelect } from '@/components/ui/native-select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useCursorPages } from '@/hooks/useCursorPages';
 import { userMessageOf } from '@/lib/errors/graphql-error';
 
 import { TerminalProductsDocument } from '../graphql/terminal.documents';
+import { useProductView, type ProductView } from '../hooks/useProductView';
 
 import { CategoryChips } from './CategoryChips';
+import { ProductCards } from './ProductCards';
+import { ProductRows } from './ProductRows';
 import { ProductSearchBar } from './ProductSearchBar';
-import { ProductTile } from './ProductTile';
 
 import type { ProductSort } from '@/graphql/__generated__/graphql';
 
@@ -26,19 +27,56 @@ const SORTS: readonly { value: ProductSort; label: string }[] = [
   { value: 'PRICE_DESC', label: 'Price (high-low)' },
 ];
 
+const VIEWS: readonly { value: ProductView; label: string }[] = [
+  { value: 'CARD', label: 'Card view' },
+  { value: 'LIST', label: 'List view' },
+];
+
 interface PickerFilter {
   search: string;
   categoryId: string;
   sort: ProductSort;
 }
 
+function OptionSelect<T extends string>({
+  label,
+  className,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  className: string;
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <NativeSelect
+      className={className}
+      aria-label={label}
+      value={value}
+      onChange={(event) => {
+        onChange(event.target.value as T);
+      }}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </NativeSelect>
+  );
+}
+
 /**
  * Product selection (F-18): server search, category chips and sort over keyset pages of 50; the
- * terminal never downloads the catalogue. Tiles stay current through `stock.changed` and
- * `product.changed` patches.
+ * terminal never downloads the catalogue. Shown as cards or as a list (F-38). Products stay current
+ * through `stock.changed` and `product.changed` patches.
  */
 export function ProductPicker() {
   const pages = useCursorPages();
+  const { view, choose } = useProductView();
   const [filter, setFilter] = useState<PickerFilter>({
     search: '',
     categoryId: '',
@@ -59,6 +97,7 @@ export function ProductPicker() {
     },
   });
   const connection = (data ?? previousData)?.products;
+  const shown = { products: connection?.nodes ?? [], loading: connection === undefined && loading };
   return (
     <section aria-label="Products" className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -67,20 +106,22 @@ export function ProductPicker() {
             change({ search });
           }}
         />
-        <NativeSelect
+        <OptionSelect
+          label="Sort"
           className="w-44"
-          aria-label="Sort"
+          options={SORTS}
           value={filter.sort}
-          onChange={(event) => {
-            change({ sort: event.target.value as ProductSort });
+          onChange={(sort) => {
+            change({ sort });
           }}
-        >
-          {SORTS.map((sort) => (
-            <option key={sort.value} value={sort.value}>
-              {sort.label}
-            </option>
-          ))}
-        </NativeSelect>
+        />
+        <OptionSelect
+          label="View"
+          className="w-36"
+          options={VIEWS}
+          value={view}
+          onChange={choose}
+        />
       </div>
       <CategoryChips
         value={filter.categoryId}
@@ -91,30 +132,15 @@ export function ProductPicker() {
       {error !== undefined && connection === undefined && (
         <p className="text-destructive">{userMessageOf(error)}</p>
       )}
-      {connection?.nodes.length === 0 && (
+      {connection?.nodes.length === 0 ? (
         <EmptyState icon={PackageSearchIcon}>
           {filter.search === '' ? 'No products here.' : `Nothing matches “${filter.search}”.`}
         </EmptyState>
+      ) : view === 'LIST' ? (
+        <ProductRows {...shown} />
+      ) : (
+        <ProductCards {...shown} />
       )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        {connection?.nodes.map((product) => (
-          <ProductTile key={product.id} product={product} />
-        ))}
-        {connection === undefined &&
-          loading &&
-          Array.from({ length: 8 }, (_, index) => (
-            <div
-              key={`loading-${String(index)}`}
-              className="surface-card grid gap-3 rounded-xl border p-3"
-              aria-hidden
-            >
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-4 w-3/5" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ))}
-      </div>
       {connection !== undefined && <CursorPager pages={pages} connection={connection} />}
     </section>
   );

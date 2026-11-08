@@ -15,6 +15,12 @@ export type ImportedProduct = Omit<ProductImportRow, 'categoryName'> & {
   categoryId: string | null;
 };
 
+/** Category ids by lower-cased name, and how many of them this import created. */
+export interface CategoryIds {
+  ids: ReadonlyMap<string, string>;
+  created: number;
+}
+
 /**
  * Product writes for imports (F-11, SYSTEM_DESIGN.md §7), kept in the catalogue because it owns
  * products. Rows are matched by barcode (Q14): an active product with that barcode gets the row's
@@ -31,9 +37,27 @@ export class ProductImportService {
     private readonly invalidation: CacheInvalidation,
   ) {}
 
-  /** Category ids by lower-cased name, for the names an upload uses (unknown names are absent). */
-  categoryIds(names: readonly string[]): Promise<Map<string, string>> {
-    return this.categories.findIdsByNames(names);
+  /**
+   * Category ids by lower-cased name for the names an upload uses, creating the missing ones first
+   * (D-29), in the caller's transaction. Names match ignoring case, and the first spelling in the
+   * file wins. Screens refresh on the `catalog.bulkChanged` at the end of the import.
+   */
+  async ensureCategories(names: readonly string[]): Promise<CategoryIds> {
+    const spellings = new Map<string, string>();
+    for (const name of names) {
+      if (!spellings.has(name.toLowerCase())) {
+        spellings.set(name.toLowerCase(), name);
+      }
+    }
+    const unique = [...spellings.values()];
+    const existing = await this.categories.findIdsByNames(unique);
+    const missing = unique.filter((name) => !existing.has(name.toLowerCase()));
+    if (missing.length === 0) {
+      return { ids: existing, created: 0 };
+    }
+    const created = await this.categories.insertNames(missing);
+    this.invalidation.after('categories');
+    return { ids: await this.categories.findIdsByNames(unique), created };
   }
 
   /** Applies one row in the caller's transaction; returns the product and whether it is new. */

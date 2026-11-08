@@ -12,6 +12,8 @@ import { cn } from '@/lib/cn';
 
 import { PAYMENT_METHOD_LABEL, type LedgerEntry } from './khata-labels';
 
+import type { ReactNode } from 'react';
+
 /** What an entry is about: the linked document, the method, the note. */
 function describe(entry: LedgerEntry): string {
   const parts = [
@@ -27,10 +29,13 @@ export function LedgerTable({
   entries,
   typeLabels,
   balanceHeading,
+  rowAction,
 }: {
   entries: readonly LedgerEntry[];
   typeLabels: Readonly<Record<string, string>>;
   balanceHeading: string;
+  /** An extra last column, e.g. regenerating a customer's bill (F-40). */
+  rowAction?: (entry: LedgerEntry) => ReactNode;
 }) {
   return (
     <Table>
@@ -41,6 +46,7 @@ export function LedgerTable({
           <TableHead>Description</TableHead>
           <TableHead className="text-right">Amount</TableHead>
           <TableHead className="text-right">{balanceHeading}</TableHead>
+          {rowAction !== undefined && <TableHead className="text-right">Bill</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -65,6 +71,9 @@ export function LedgerTable({
               <TableCell className="text-right tabular-nums">
                 {formatRs(entry.balanceAfter)}
               </TableCell>
+              {rowAction !== undefined && (
+                <TableCell className="text-right whitespace-nowrap">{rowAction(entry)}</TableCell>
+              )}
             </TableRow>
           );
         })}

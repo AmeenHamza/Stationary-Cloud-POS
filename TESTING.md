@@ -81,6 +81,12 @@ deadline. No real customer data: factories generate fake names and phone numbers
 | FIN-22 | Property test: 500 random sales/refunds/restocks/adjustments/khata entries | All DATABASE.md §12 integrity checks pass |
 | FIN-23 | Restock/adjust rules | Decrease needs reason; cashier → `FORBIDDEN`; movement sign constraints enforced |
 | FIN-24 | `expectedAmount` mismatch on refund | `QUOTE_MISMATCH`; nothing written |
+| FIN-25 | 10 % off one of two items (1,000 + 500) | That line alone: discount 100, total 1,400; stored and on the receipt (D-27) |
+| FIN-26 | The same with 10 % overall | Overall 140 on the remaining 1,400, spread 90 / 50; total 1,260 |
+| FIN-27 | Flat Rs 50 off a line of 3 at Rs 100, tax 10 %, Bill GST 18 % | Off the whole line, before both taxes: tax 25, GST 49.50, total 324.50 |
+| FIN-28 | Item discount above the item, or above 100 %; a changed `expectedTotal` | `BAD_USER_INPUT` / `PRICE_CHANGED`; nothing written |
+| FIN-29 | Flat overall discount above what item discounts left | Refused; the exact amount is accepted |
+| FIN-30 | A bill fully discounted on its items, with a percentage overall | Nothing to allocate; total 0.00 |
 
 ---
 
@@ -189,6 +195,17 @@ deadline. No real customer data: factories generate fake names and phone numbers
 | E2E-11 | Cashier visiting admin routes is redirected; the API denies direct calls |
 | E2E-12 | Import with one invalid row: progress, completion, error report download |
 | E2E-13 | Dashboard today tiles update after a sale on another counter |
+| E2E-15 | Terminal: the View dropdown switches to the list (Product, Stock, Price in three lists side by side), a tap anywhere on a row adds to the cart, and the choice survives a reload (F-38) |
+| E2E-16 | Payment: a discount on one item, then an overall one on what is left; the sale completes at that total (F-39) |
+| E2E-17 | A cashier regenerates an Udhaar bill from the customer's khata: it prints, with the bill number and customer (F-40) |
+| E2E-18 | Products: a never-sold product is deleted; a sold one is refused and stays (F-41) |
+| E2E-19 | Customers: one with no history is deleted; a cashier sees no Delete button (F-41) |
+| E2E-20 | Staff: an unused account is deleted; deleting your own account is refused (F-41) |
+
+The suite shares two per-IP limits from one machine: `login-ip` (30 per 15 minutes) and `ws-connect` (30 per
+minute). New specs reuse sessions with `signInOnce` and move between pages by link, because each page load opens
+a socket. After a failure Playwright restarts its worker and forgets those sessions, so a later sign-in can fail
+with "Too many attempts": read the first failure in a run first.
 | E2E-14 | The key is saved in Settings, then each AI feature runs against the Groq stub (`@pos/testkit` groq-stub, started by `e2e/scripts/start-api.ts`) in all 3 languages, with Print and the chat |
 
 ---

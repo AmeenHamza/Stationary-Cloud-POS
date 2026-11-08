@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useCursorPages } from '@/hooks/useCursorPages';
 
 import { StaffUsersDocument } from '../graphql/staff.documents';
+import { useDeleteStaff } from '../hooks/useDeleteStaff';
 import { useStaffStatusToggle } from '../hooks/useStaffStatusToggle';
 
 import { StaffDialogs } from './StaffDialogs';
@@ -26,6 +27,7 @@ export function StaffScreen() {
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [resetting, setResetting] = useState<StaffMember | null>(null);
   const toggle = useStaffStatusToggle();
+  const deletion = useDeleteStaff();
 
   const filter = { ...(search === '' ? {} : { search }), ...(status === 'ALL' ? {} : { status }) };
   const { data, error } = useQuery(StaffUsersDocument, {
@@ -65,7 +67,12 @@ export function StaffScreen() {
         connection={connection}
         error={error}
         pages={pages}
-        actions={{ onEdit: setEditing, onResetPassword: setResetting, onToggleStatus: toggle.ask }}
+        actions={{
+          onEdit: setEditing,
+          onResetPassword: setResetting,
+          onToggleStatus: toggle.ask,
+          onDelete: deletion.ask,
+        }}
       />
       <StaffDialogs
         creating={creating}
@@ -76,6 +83,7 @@ export function StaffScreen() {
           else close[dialog](null);
         }}
         toggle={toggle}
+        deletion={deletion}
       />
     </>
   );

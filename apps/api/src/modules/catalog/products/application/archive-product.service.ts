@@ -14,9 +14,9 @@ import { toProductView, type ProductView } from './product-view';
 import type { Principal } from '../../../../common/auth/principal';
 
 /**
- * `archiveProduct` / `restoreProduct` (Q16b): products are never deleted, because orders and the
- * stock ledger reference them. Archiving takes the product off the shelf (and off the low-stock
- * list); restoring fails with a barcode CONFLICT if another active product took the barcode.
+ * `archiveProduct` / `restoreProduct` (Q16b): the only way off the shelf for a product on past
+ * bills, which cannot be deleted (D-28). Archiving also takes it off the low-stock list; restoring
+ * fails with a barcode CONFLICT if another active product took the barcode.
  * Repeating either call on a product already in that state returns it unchanged.
  */
 @Injectable()

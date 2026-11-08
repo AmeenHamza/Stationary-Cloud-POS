@@ -24,22 +24,7 @@ const quantity = z
   .min(1, { error: 'Quantity must be at least 1' })
   .max(MAX_QUANTITY_PER_LINE, { error: `At most ${String(MAX_QUANTITY_PER_LINE)} per line` });
 
-/** One cart line: the server reads prices from the locked product row, never from the client. */
-export const saleLineInputSchema = z.object({
-  productId: idSchema,
-  unit: z.enum(SALE_UNITS),
-  quantity,
-});
-
-export const customSaleLineInputSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  unit: z.enum(SALE_UNITS),
-  quantity,
-  unitPrice: moneySchema,
-  taxRate: percentSchema,
-});
-
-/** Bill discount (BR-06): flat rupees or a percentage of the subtotal. */
+/** A discount (BR-06, D-27): flat rupees or a percentage, on the whole bill or on one item. */
 export const discountInputSchema = z
   .object({
     type: z.enum(DISCOUNT_TYPES),
@@ -54,6 +39,23 @@ export const discountInputSchema = z
     error: 'Enter the discount percentage',
     path: ['percent'],
   });
+
+/** One cart line: the server reads prices from the locked product row, never from the client. */
+export const saleLineInputSchema = z.object({
+  productId: idSchema,
+  unit: z.enum(SALE_UNITS),
+  quantity,
+  discount: discountInputSchema.nullish(),
+});
+
+export const customSaleLineInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  unit: z.enum(SALE_UNITS),
+  quantity,
+  unitPrice: moneySchema,
+  taxRate: percentSchema,
+  discount: discountInputSchema.nullish(),
+});
 
 /** Bill GST (BR-07): optional per bill, rate editable (default from settings). */
 export const billGstInputSchema = z
