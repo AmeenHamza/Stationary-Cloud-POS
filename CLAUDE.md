@@ -11,8 +11,8 @@ problem this rebuild must fix without losing features or financial correctness.
 **Current status:** implementation in progress under the owner's feature-by-feature instruction, following
 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) phase by phase, in the owner's batches (1+2 realtime and
 catalogue, 3+4 khata and billing, 5+6 dashboard and import/export, 7 AI). Phases 1–12 and 14 are done; Phase 15's
-local part is done (deployment waits for the owner's U-01–U-07), and Phase 13 (legacy migration) waits for the old
-schema (Q27). The progress ledger (§4) and FEATURES.md §8 are the source of truth for what comes next.
+local part is done (deployment waits for the owner's U-01–U-07), and Phase 13 (legacy migration) is done: the
+old data was migrated into production on 2026-11-10 and validated (`tools/legacy-migration`, ADR-048). The progress ledger (§4) and FEATURES.md §8 are the source of truth for what comes next.
 
 ## Stack (details and versions: [DECISIONS.md](DECISIONS.md))
 

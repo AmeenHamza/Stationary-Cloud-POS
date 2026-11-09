@@ -589,6 +589,33 @@ exposed, and keep it out of source control. Existing admin staff management rema
 - **Consequences:** a mistyped category name now creates a category instead of failing its row. New categories
   reach other screens with the `catalog.bulkChanged` at the end of the import.
 
+### ADR-048 Legacy migration: one validated transaction, confirmed by fingerprint (2026-11-10)
+- **Context:** the old database is small (11 MB, about 5,500 rows), still in use until cutover, and its money
+  is `double precision`. The owner asked for a dry run first, explicit confirmation, idempotency, recovery and
+  validation that blocks success (F-36, `tools/legacy-migration/MAPPING.md`).
+- **Old side:** one `REPEATABLE READ READ ONLY` snapshot in a session with `default_transaction_read_only`,
+  so all tables are read as of one moment and the session cannot write. Money is read as text and rounded to
+  the paisa with `@pos/domain`.
+- **One transaction for the whole write:** tables locked, the new database checked again under the lock, rows
+  inserted in batches (bind parameters, `ON CONFLICT DO NOTHING` on deterministic ids and `legacy_id`), then
+  the full validation **inside the same transaction**. COMMIT only if every critical check passes; any error
+  or failed check rolls everything back. So the new database is either fully migrated and validated, or
+  unchanged, and recovery is always "fix the cause, run again". A re-run after success inserts nothing.
+  Batches per entity with separate commits were rejected: they make a half-written state possible for no
+  gain at this size.
+- **Confirmation by fingerprint:** the dry run prints a 12-character digest of everything the run would
+  write; `apply --confirm <it>` refuses unless the old data still produces the same digest. The owner
+  confirms the exact data they reviewed, and a change in the old database since then stops the run.
+- **Refuses a database in use:** rows the migration did not write (or any import job) stop the run. Merging
+  old bills into a live system needs its own plan.
+- **Validation is independent of the transforms:** the old side's counts, money totals, groups and
+  per-record values are computed from the raw old rows; the new side's with SQL; plus the application's
+  integrity checks (DATABASE.md §12). Payment rows split by method are a warning; everything else is
+  critical. Details: `tools/legacy-migration/VALIDATION.md`.
+- **Checkpoint and audit log:** a run folder per run (`run.jsonl`, `report.md`, `issues.csv`, `id-map.csv`)
+  on the owner's machine, git-ignored. Nothing is written to the app's `audit_logs` (its action list is
+  application code); every migrated row carries `legacy_id`.
+
 ## 3. Unresolved decisions (owner input needed; defaults apply until answered)
 
 | ID | Decision | Proposed default | Affects |

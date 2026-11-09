@@ -42,7 +42,7 @@ interface Classified<T extends string> {
   refundId?: string | null;
 }
 
-/** A payment's method: empty means cash (Q39); Udhaar or an unknown name blocks. */
+/** A payment's method: empty means cash (Q42); Udhaar or an unknown name blocks. */
 function paidWith(row: EntryRow, issues: Issues, ref: string): PaymentMethod {
   const method = paymentMethodOf(row.paymentMethod);
   if (method === null) {
@@ -112,7 +112,7 @@ function planEntries<T extends string>(
 }
 
 /**
- * Customer khata: a debit raises what the customer owes; a credit or payment lowers it (Q39). A debit
+ * Customer khata: a debit raises what the customer owes; a credit or payment lowers it (MAPPING.md §5.4). A debit
  * for a migrated Udhaar bill becomes its credit sale and a credit for its refund a refund credit;
  * anything else is a manual credit or a payment.
  */

@@ -217,9 +217,9 @@ with "Too many attempts": read the first failure in a run first.
 | ARCH-01 | Nest module import graph equals ARCHITECTURE.md §7.1 |
 | ARCH-02 | Prisma enums equal `@pos/contracts/enums.ts` |
 | ARCH-03 | Each GraphQL InputType's fields equal its Zod schema's keys |
-| MIG-01 | Legacy dry-run against a fixture DB built from the owner-provided schema (Q27): report counts, duplicates, mismatches |
-| MIG-02 | Re-running the migration inserts nothing new (idempotent via `legacy_id`) |
-| MIG-03 | Post-run verification totals equal the fixture's totals |
+| MIG-01 | Legacy dry-run against a fixture DB built from the real old schema (Q27): report counts, findings, fingerprint; nothing written; the old session refuses writes (`tools/legacy-migration/test/dry-run.int.test.ts`) |
+| MIG-02 | Re-running the migration inserts nothing new (idempotent via ids and `legacy_id`); a failure half way leaves the new database unchanged (`apply` and `safety.int.test.ts`) |
+| MIG-03 | Post-run validation (36 checks, VALIDATION.md) passes inside the transaction, and `verify` catches a changed value |
 | MIG-04 | Duplicate active barcodes handled per Q35 default |
 | MIG-05 | Bill counters continue after the highest migrated number per date |
 | STG-01 | Staging: transactions and prepared statements through the Neon pooled endpoint |

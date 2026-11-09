@@ -1,4 +1,4 @@
-import { capped, legacyUuid } from './values.js';
+import { capped, instant, legacyUuid } from './values.js';
 
 import type { Issues } from './issues.js';
 import type { LegacyRow } from '../legacy/schema-map.js';
@@ -8,6 +8,8 @@ export interface CategoryPlan {
   legacyId: string;
   name: string;
   description: string | null;
+  /** The old creation time; null when the old row has none (the run time is used). */
+  createdAt: Date | null;
 }
 
 /** Categories; names are unique ignoring case (citext), so later duplicates merge into the first. */
@@ -33,6 +35,7 @@ export function planCategories(
       legacyId,
       name,
       description: capped(row.description, 200, issues, ref, 'description'),
+      createdAt: instant(row.createdAt),
     };
     categories.push(plan);
     byName.set(name.toLowerCase(), plan);

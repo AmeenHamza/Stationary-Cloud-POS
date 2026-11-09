@@ -331,12 +331,21 @@ packages/config-typescript/  base.json · library.json · node.json · nestjs.js
 packages/config-eslint/      base.js · restricted.js · nest.js · next.js · package.json
 packages/testkit/            src/ env.ts · test-database.ts (template clones; drop retries past autovacuum) · prisma-cli.ts (migrate) · tcp-proxy.ts (cut/stall/restore, client-data tap; byte counting in Phase 14) · pg-statement-counter.ts (NET-02, PAG-07) · groq-stub.ts (OpenAI-compatible Groq stub, records requests: SEC-12, E2E-14) · index.ts   # test-only
 
-tools/legacy-migration/  package.json · tsconfig.json
-  src/ main.ts (CLI: --dry-run --entity --limit) · config.ts
-       legacy/   schema-map.ts   # written after the owner shares the old schema (Q27)
-       steps/    categories.ts · products.ts · customers.ts · vendors.ts · ledgers.ts · orders.ts
-       report/   report-writer.ts
-       verify/   verify-counts.ts · verify-balances.ts · verify-stock.ts
+tools/legacy-migration/  package.json · tsconfig.json · README.md (run, recover) · MAPPING.md (schemas, mapping,
+                         findings) · VALIDATION.md (checks, results) · .env.example   # .env and output/ git-ignored
+  src/ main.ts (CLI: check · dry-run · apply --confirm · verify) · config.ts · log.ts (run log, redaction)
+       db/        connect.ts (read-only snapshot of the old database, retries)
+       legacy/    schema-map.ts (the only file naming old tables and columns) · schema-check.ts · reader.ts
+       transform/ plan.ts · catalog · products · parties · orders · order-lines · order-terms · order-refund ·
+                  ledgers · counters · payment-method · values · issues · fingerprint
+       target/    preflight.ts · insert.ts (batched INSERT … ON CONFLICT) · write-plan.ts · write-catalog ·
+                  write-parties · write-orders · write-ledgers · step.ts
+       verify/    validate.ts · source-facts · source-records · source-values · target-facts · compare ·
+                  integrity (DATABASE.md §12 checks) · facts.ts
+       report/    run-report.ts · markdown.ts · write-report.ts
+       commands/  old-side.ts · dry-run.ts · apply.ts · verify.ts (also check)
+  test/ fixtures/legacy-schema.sql (old production schema) · legacy-data.sql (invented) · support.ts ·
+        dry-run / apply / safety .int.test.ts (MIG-01–MIG-05)
 tools/perf/              package.json · tsconfig.json · vitest.config.ts · budgets.json (§4.1–§4.3)   # perf-report/ is git-ignored
   src/ run.ts (CLI) · config.ts (dataset and workload, §8.1–8.2) · random.ts (seeded) · perf.test.ts
        dataset/   generate-dataset.ts · catalog-rows.ts · insert-catalog.ts · history-sql.ts (12 months in SQL)

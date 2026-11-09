@@ -3,11 +3,9 @@ import { LEGACY, type LegacyEntity } from './schema-map.js';
 import type pg from 'pg';
 
 export interface SchemaCheck {
-  /** Missing tables or required columns: the migration cannot run. */
+  /** Missing tables or columns: the migration cannot run. */
   problems: string[];
-  /** Missing optional columns: the migration runs without them. */
-  notes: string[];
-  /** `table.column` → its PostgreSQL data type, for every mapped column that exists. */
+  /** `table.column` → its PostgreSQL data type, for every mapped column. */
   types: Map<string, string>;
 }
 
@@ -16,7 +14,7 @@ export interface SchemaCheck {
  * is read). For a table with missing columns it lists the columns that do exist, so the map can be
  * corrected in one step.
  */
-export async function checkLegacySchema(legacy: pg.Client): Promise<SchemaCheck> {
+export async function checkLegacySchema(legacy: pg.ClientBase): Promise<SchemaCheck> {
   const { rows } = await legacy.query<{ table: string; column: string; type: string }>(
     `SELECT table_name AS table, column_name AS column, data_type AS type
      FROM information_schema.columns WHERE table_schema = 'public'
@@ -28,7 +26,7 @@ export async function checkLegacySchema(legacy: pg.Client): Promise<SchemaCheck>
     columns.set(row.column, row.type);
     tables.set(row.table, columns);
   }
-  const check: SchemaCheck = { problems: [], notes: [], types: new Map() };
+  const check: SchemaCheck = { problems: [], types: new Map() };
   for (const entity of Object.keys(LEGACY) as LegacyEntity[]) {
     const { table, columns } = LEGACY[entity];
     const actual = tables.get(table);
@@ -39,12 +37,10 @@ export async function checkLegacySchema(legacy: pg.Client): Promise<SchemaCheck>
     const missing: string[] = [];
     for (const spec of Object.values(columns)) {
       const type = actual.get(spec.column);
-      if (type !== undefined) {
-        check.types.set(`${table}.${spec.column}`, type);
-      } else if (spec.optional === true) {
-        check.notes.push(`${table}.${spec.column} not found (optional; migrated without it).`);
-      } else {
+      if (type === undefined) {
         missing.push(spec.column);
+      } else {
+        check.types.set(`${table}.${spec.column}`, type);
       }
     }
     if (missing.length > 0) {

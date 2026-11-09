@@ -548,22 +548,28 @@ Restore procedures (runbook in `docs/runbooks/restore.md`, Phase 15):
 
 ## 11. Legacy data migration (D-21)
 
-`tools/legacy-migration` runs on the owner's machine with `LEGACY_DATABASE_URL` (a read-only role on the old
-Neon project) and the new `DIRECT_DATABASE_URL`. The old schema is unknown until the owner shares
-table/column names (Q27), so the mapping file `src/legacy/schema-map.ts` is written then.
+`tools/legacy-migration` runs on the owner's machine with `LEGACY_DATABASE_URL` (the old Neon project, opened
+read-only) and `TARGET_DATABASE_URL` (the new database's direct endpoint). The old schema, a profile of its
+data and the full old-to-new mapping are in [tools/legacy-migration/MAPPING.md](tools/legacy-migration/MAPPING.md)
+(Q27, 2026-11-10); `src/legacy/schema-map.ts` is the only code that names old tables and columns. How to run
+it: [README.md](tools/legacy-migration/README.md); why it works this way: ADR-048.
 
-1. **Order:** categories → products (+ `MIGRATION` stock movement for the current balance) → customers and
-   vendors (+ `OPENING_BALANCE` when history is incomplete) → ledger entries → orders and lines (snapshots,
-   `cashier_name`) → bill counters set to each date's maximum.
-2. **Idempotent:** every inserted row carries `legacy_id`. Re-runs skip existing rows.
-3. **Batches** of 500 rows, read with keyset pagination from the old database. The old project's Neon
-   transfer for a full read is about its data size, a one-time cost.
-4. **`--dry-run`** writes a report and nothing else: counts per entity, duplicate active barcodes (Q35),
-   implausible stock or prices (Q19), orders whose stored total differs from recomputed components by more
-   than Rs 0.01, khata balances that differ from Σ entries. The report prints at most 50 items per category
-   with totals. The full lists go to a CSV file on the owner's machine.
-5. **Verification** after a real run: per-entity counts, Σ stock, Σ khata balances and Σ order totals per
-   month must match the old database exactly. Any mismatch fails the run.
+1. **Order:** categories → products (+ one `MIGRATION` stock movement for each current balance) → customers
+   and vendors → bills, lines, refunds and refund lines (snapshots, `cashier_name`) → both ledgers in time
+   order with running balances → balances = Σ entries → bill counters at each date's highest number.
+2. **Read:** one `REPEATABLE READ` read-only snapshot of the old database, keyset batches of 500
+   (configurable). The old project's Neon transfer for a full read is about its data size (11 MB), once.
+3. **Dry run** (`migrate dry-run`) writes nothing: planned rows per table, every finding (duplicate barcodes
+   Q35, implausible values Q19, bills whose total or payments differ from their items, and more), a check of
+   the new database, and a **fingerprint** of the plan. Bounded output; full lists go to CSV files on the
+   owner's machine.
+4. **Apply** (`migrate apply --confirm <fingerprint>`) refuses unless the old data still gives that
+   fingerprint, and refuses a new database that holds data it did not write. It writes everything in **one
+   transaction** (tables locked; deterministic ids and `legacy_id`; re-runs insert nothing), validates inside
+   it, and commits only if every critical check passes. Otherwise it rolls everything back.
+5. **Validation** (also `migrate verify` at any time): rows read = rows in each old table; counts, money totals,
+   sales per month and every record (stock, prices, balances, bill totals, dates) equal on both sides; and
+   the §12 integrity checks. Details: [VALIDATION.md](tools/legacy-migration/VALIDATION.md).
 6. **Users** are not migrated (A-07): the admin recreates staff accounts; old bills keep `cashier_name`.
 
 ---

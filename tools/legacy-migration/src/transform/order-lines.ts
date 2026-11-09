@@ -1,4 +1,4 @@
-import { Decimal, ZERO, allocate, sum } from '@pos/domain';
+import { Decimal, ZERO, allocate, round2, sum } from '@pos/domain';
 
 import { capped, integer, money, text } from './values.js';
 
@@ -19,6 +19,8 @@ export interface LinePlan {
   unitPrice: Decimal;
   taxRate: Decimal;
   lineGross: Decimal;
+  /** The item's own discount (D-27); the old app's `order_items.discount`. */
+  itemDiscount: Decimal;
   lineDiscount: Decimal;
   lineNet: Decimal;
   lineTax: Decimal;
@@ -27,6 +29,17 @@ export interface LinePlan {
 
 const MAX_LINES = 100;
 const MAX_QUANTITY = 10_000;
+
+/**
+ * The rate the old app charged on an item: its tax over its price, as the old app taxed the price
+ * before any discount (MAPPING.md §2.4). Today's product rate may differ, so it is not used.
+ */
+function chargedRate(lineTax: Decimal, lineGross: Decimal): Decimal {
+  if (lineTax.isZero() || lineGross.isZero()) {
+    return ZERO;
+  }
+  return Decimal.min(round2(lineTax.times(100).dividedBy(lineGross)), 100);
+}
 
 /** One old item as a line, before the bill discount is spread (null when it cannot be read). */
 function lineOf(
@@ -47,6 +60,7 @@ function lineOf(
   const lineGross = unitPrice.times(quantity);
   const ownDiscount = money(item.discount, issues, ref, 'discount');
   const refundedQuantity = integer(item.refundedQuantity) ?? 0;
+  const lineTax = money(item.taxAmount, issues, ref, 'tax');
   if (unitPrice.isNegative() || ownDiscount.isNegative() || ownDiscount.greaterThan(lineGross)) {
     issues.block('invalid-value', ref, 'negative price, or a discount above the line amount');
   }
@@ -62,17 +76,19 @@ function lineOf(
     productId: product?.id ?? null,
     productName:
       capped(item.productName, 200, issues, ref, 'product name') ?? product?.name ?? 'Item',
-    productNameUrdu: product?.nameUrdu ?? null,
-    barcode: product?.barcode ?? null,
+    // Not recorded on the old sale; today's product values would be a guess (MAPPING.md §5.7).
+    productNameUrdu: null,
+    barcode: null,
     saleUnit: box ? 'BOX' : 'PIECE',
     piecesPerUnit: box ? Math.max(integer(item.piecesPerUnit) ?? 1, 1) : 1,
     quantity,
     unitPrice,
-    taxRate: new Decimal(product?.taxRate ?? '0'),
+    taxRate: chargedRate(lineTax, lineGross),
     lineGross,
+    itemDiscount: ownDiscount,
     lineDiscount: ownDiscount,
     lineNet: lineGross.minus(ownDiscount),
-    lineTax: money(item.taxAmount, issues, ref, 'tax'),
+    lineTax,
     refundedQuantity,
     ownDiscount,
   };

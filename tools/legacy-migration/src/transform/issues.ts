@@ -1,6 +1,6 @@
 /**
  * Findings of the dry run (DATABASE.md §11 step 4). Blocking ones stop `--apply` until the owner fixes
- * the data in the old app; the others are handled by the documented defaults (FEATURES.md Q35, Q39).
+ * the data in the old app; the others are handled by the documented defaults (FEATURES.md Q35, Q41–Q44).
  */
 export type IssueKind =
   | 'category-merged'

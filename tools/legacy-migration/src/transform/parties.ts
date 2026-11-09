@@ -1,6 +1,6 @@
 import { normalizeNameKey, phoneDigits } from '@pos/domain';
 
-import { capped, legacyUuid } from './values.js';
+import { capped, instant, legacyUuid } from './values.js';
 
 import type { Issues } from './issues.js';
 import type { LegacyRow } from '../legacy/schema-map.js';
@@ -16,13 +16,14 @@ export interface PartyPlan {
   email: string | null;
   address: string | null;
   productsSupplied: string | null;
+  createdAt: Date | null;
 }
 
 type PartyRow = LegacyRow<'customers'> & Partial<LegacyRow<'vendors'>>;
 
 /**
  * Customers (`kind` customer) or vendors, in id order. Loyalty points and total purchases are not
- * migrated: the new system has neither (Q39); purchases are recomputed from the migrated bills.
+ * migrated: the new system has neither (Q41); purchases are recomputed from the migrated bills.
  */
 export function planParties(
   kind: 'customer' | 'vendor',
@@ -49,6 +50,7 @@ export function planParties(
         kind === 'vendor'
           ? capped(row.productsSupplied ?? null, 300, issues, ref, 'products supplied')
           : null,
+      createdAt: instant(row.createdAt),
     };
     idOf.set(legacyId, plan.id);
     return plan;

@@ -10,10 +10,13 @@ import type { Decimal } from '@pos/domain';
 
 type OrderRow = LegacyRow<'orders'>;
 
-/** The old discount type (flat / percentage); a discount without a type becomes a flat amount. */
+/**
+ * The bill-level discount's terms (flat / percentage); a bill discount without a type becomes a flat
+ * amount. Item discounts are not part of it (D-27).
+ */
 export function discountTermsOf(
   row: OrderRow,
-  discountTotal: Decimal,
+  billDiscount: Decimal,
   issues: Issues,
   ref: string,
 ): { type: DiscountType; value: Decimal } {
@@ -25,8 +28,8 @@ export function discountTermsOf(
     }
     return { type: 'PERCENT', value };
   }
-  if (kind === 'flat' || !discountTotal.isZero()) {
-    return { type: 'FLAT', value: kind === 'flat' && !value.isNegative() ? value : discountTotal };
+  if (kind === 'flat' || !billDiscount.isZero()) {
+    return { type: 'FLAT', value: kind === 'flat' && !value.isNegative() ? value : billDiscount };
   }
   return { type: 'NONE', value: ZERO };
 }
@@ -67,13 +70,25 @@ export function oldTotalOf(
     : sum(payments.map((payment) => money(payment.amount, issues, ref, 'payment')));
 }
 
-/** Payment rows that disagree with the bill's own method are reported; the bill's method is kept. */
+/**
+ * Payment rows that disagree with the bill's own method are reported (the bill's method is kept);
+ * payments that do not add up to the bill's total stop the run (MAPPING.md §5.6).
+ */
 export function checkPayments(
   method: PaymentMethod,
   payments: readonly LegacyRow<'orderPayments'>[],
+  billTotal: Decimal,
   issues: Issues,
   ref: string,
 ): void {
+  const paid = sum(payments.map((payment) => money(payment.amount, issues, ref, 'payment')));
+  if (payments.length > 0 && !paid.equals(billTotal)) {
+    issues.block(
+      'total-mismatch',
+      ref,
+      `payments ${paid.toFixed(2)}, bill ${billTotal.toFixed(2)}`,
+    );
+  }
   if (payments.length > 1) {
     issues.note('split-payment', ref, `${String(payments.length)} payments; kept as ${method}`);
   } else if (

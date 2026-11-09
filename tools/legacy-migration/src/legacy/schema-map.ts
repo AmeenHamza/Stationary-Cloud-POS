@@ -1,17 +1,13 @@
 /**
- * The old system's tables and the columns the migration reads (Q27, DATABASE.md §11). This is the
- * only file that names old tables or columns. It was written from the owner's screenshots of the old
- * Neon project (2026-11-01); names marked `cut` were cut off there and are best readings. `pnpm
- * migrate --check` compares this map with the real database and lists the actual columns of any
- * table whose names differ. `optional` columns may be missing; the migration then does without.
+ * The old system's tables and the columns the migration reads (Q27, MAPPING.md §2). This is the only
+ * file that names old tables or columns. It was checked against the real old database on 2026-11-10;
+ * `pnpm migrate check` compares it with the database again and lists the actual columns of any table
+ * that differs. Every column here is required: a missing one stops the run instead of being skipped.
  */
 export interface LegacyColumn {
   column: string;
-  optional?: boolean;
   /** Timestamps are read as UTC instants (see LEGACY_NAIVE_TIMESTAMPS). */
   timestamp?: boolean;
-  /** The header was cut off in the screenshot: the name is a best reading. */
-  cut?: boolean;
 }
 
 export interface LegacyTable {
@@ -19,36 +15,39 @@ export interface LegacyTable {
   columns: Readonly<Record<string, LegacyColumn>>;
 }
 
-const col = (column: string, flags: Omit<LegacyColumn, 'column'> = {}): LegacyColumn => ({
-  column,
-  ...flags,
-});
-const cut = (column: string, flags: Omit<LegacyColumn, 'column' | 'cut'> = {}): LegacyColumn =>
-  col(column, { ...flags, cut: true });
+const col = (column: string): LegacyColumn => ({ column });
+const time = (column: string): LegacyColumn => ({ column, timestamp: true });
 
 export const LEGACY = {
   categories: {
     table: 'categories',
-    columns: { id: col('id'), name: col('name'), description: col('description') },
+    columns: {
+      id: col('id'),
+      name: col('name'),
+      description: col('description'),
+      createdAt: time('created_at'),
+    },
   },
   products: {
     table: 'products',
     columns: {
       id: col('id'),
-      barcode: cut('barcode'),
+      barcode: col('barcode'),
       name: col('name'),
-      nameUrdu: cut('name_urdu'),
+      nameUrdu: col('name_urdu'),
       price: col('price'),
       cost: col('cost'),
       stock: col('stock'),
-      lowStockThreshold: cut('low_stock_threshold'),
-      lowStockUnit: cut('low_stock_unit', { optional: true }),
-      taxRate: cut('tax_rate'),
-      baseUnit: cut('base_unit', { optional: true }),
-      piecesPerBox: cut('pieces_per_box'),
-      boxPrice: cut('box_price', { optional: true }),
-      categoryId: cut('category_id'),
-      isActive: cut('is_active'),
+      lowStockThreshold: col('low_stock_threshold'),
+      lowStockUnit: col('low_stock_threshold_unit'),
+      taxRate: col('tax_rate'),
+      baseUnit: col('base_unit_name'),
+      piecesPerBox: col('pieces_per_box'),
+      boxPrice: col('box_price'),
+      categoryId: col('category_id'),
+      isActive: col('is_active'),
+      createdAt: time('created_at'),
+      updatedAt: time('updated_at'),
     },
   },
   customers: {
@@ -58,7 +57,8 @@ export const LEGACY = {
       name: col('name'),
       phone: col('phone'),
       email: col('email'),
-      address: cut('address'),
+      address: col('address'),
+      createdAt: time('created_at'),
     },
   },
   vendors: {
@@ -68,21 +68,22 @@ export const LEGACY = {
       name: col('name'),
       phone: col('phone'),
       email: col('email'),
-      address: cut('address'),
-      productsSupplied: cut('products_supplied', { optional: true }),
+      address: col('address'),
+      productsSupplied: col('products'),
+      createdAt: time('created_at'),
     },
   },
   customerTransactions: {
     table: 'customer_transactions',
     columns: {
       id: col('id'),
-      customerId: cut('customer_id'),
+      customerId: col('customer_id'),
       type: col('type'),
-      amount: cut('amount'),
-      description: cut('description'),
-      paymentMethod: cut('payment_method'),
-      orderId: cut('order_id'),
-      createdAt: cut('created_at', { timestamp: true }),
+      amount: col('amount'),
+      description: col('description'),
+      paymentMethod: col('payment_method'),
+      orderId: col('order_id'),
+      createdAt: time('created_at'),
     },
   },
   vendorTransactions: {
@@ -91,47 +92,47 @@ export const LEGACY = {
       id: col('id'),
       vendorId: col('vendor_id'),
       type: col('type'),
-      amount: cut('amount'),
-      description: cut('description'),
-      paymentMethod: cut('payment_method'),
-      createdAt: cut('created_at', { timestamp: true }),
+      amount: col('amount'),
+      description: col('description'),
+      paymentMethod: col('payment_method'),
+      createdAt: time('created_at'),
     },
   },
   orders: {
     table: 'orders',
     columns: {
       id: col('id'),
-      orderNumber: cut('order_number'),
-      createdAt: cut('created_at', { timestamp: true }),
-      totalAmount: cut('total_amount', { optional: true }),
-      discountAmount: cut('discount_amount'),
-      discountType: cut('discount_type'),
-      discountValue: cut('discount_value'),
-      taxAmount: cut('tax_amount', { optional: true }),
-      billGstApplied: cut('bill_gst_applied', { optional: true }),
-      billGstPercentage: cut('bill_gst_percentage', { optional: true }),
-      billGstAmount: cut('bill_gst_amount', { optional: true }),
-      /** The amount charged after discount and GST; hidden in the screenshot. */
-      finalAmount: cut('final_amount', { optional: true }),
-      paymentMethod: cut('payment_method'),
+      orderNumber: col('order_number'),
+      createdAt: time('created_at'),
+      totalAmount: col('total_amount'),
+      discountAmount: col('discount_amount'),
+      discountType: col('discount_type'),
+      discountValue: col('discount_value'),
+      taxAmount: col('tax_amount'),
+      billGstApplied: col('bill_gst_enabled'),
+      billGstPercentage: col('bill_gst_percentage'),
+      billGstAmount: col('bill_gst_amount'),
+      /** The amount charged after discount, product tax and Bill GST (= the bill's payment). */
+      finalAmount: col('net_amount'),
+      paymentMethod: col('payment_method'),
       status: col('status'),
-      refundedAmount: cut('refunded_amount'),
-      customerId: cut('customer_id'),
-      cashierId: cut('cashier_id'),
+      refundedAmount: col('refunded_amount'),
+      customerId: col('customer_id'),
+      cashierId: col('cashier_id'),
     },
   },
   orderItems: {
     table: 'order_items',
     columns: {
       id: col('id'),
-      orderId: cut('order_id'),
-      productId: cut('product_id'),
-      productName: cut('product_name'),
-      quantity: cut('quantity'),
-      unitPrice: cut('unit_price'),
-      discount: cut('discount'),
-      taxAmount: cut('tax_amount'),
-      saleUnit: cut('sale_unit'),
+      orderId: col('order_id'),
+      productId: col('product_id'),
+      productName: col('product_name'),
+      quantity: col('quantity'),
+      unitPrice: col('unit_price'),
+      discount: col('discount'),
+      taxAmount: col('tax_amount'),
+      saleUnit: col('sale_unit'),
       piecesPerUnit: col('pieces_per_unit'),
       refundedQuantity: col('refunded_quantity'),
     },
@@ -140,12 +141,12 @@ export const LEGACY = {
     table: 'order_payments',
     columns: {
       id: col('id'),
-      orderId: cut('order_id'),
-      paymentMethod: cut('payment_method'),
-      amount: cut('amount'),
+      orderId: col('order_id'),
+      paymentMethod: col('payment_method'),
+      amount: col('amount'),
     },
   },
-  users: { table: 'users', columns: { id: col('id'), fullName: cut('full_name') } },
+  users: { table: 'users', columns: { id: col('id'), fullName: col('full_name') } },
   systemSettings: {
     table: 'system_settings',
     columns: { id: col('id'), key: col('key'), value: col('value') },

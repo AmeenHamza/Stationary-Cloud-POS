@@ -20,18 +20,27 @@ export interface RefundPlan {
   settlement: RefundSettlement;
   paymentMethod: PaymentMethod;
   lines: RefundLinePlan[];
+  /** Not recorded by the old app: the bill's time, or its khata refund entry's (Q43). */
+  createdAt: Date;
+  businessDate: string;
 }
 
 /**
  * The old app keeps only a refunded amount per bill and a refunded quantity per item. Each refunded
- * bill becomes one refund for that amount (its date is unknown, so it takes the bill's date), split
+ * bill becomes one refund for that amount (its date is unknown, so it takes the bill's date, Q43), split
  * over the refunded items by their value, so refunded totals match (DATABASE.md §12).
  */
 export function planRefund(
   legacyOrderId: string,
   refunded: Decimal,
   lines: readonly LinePlan[],
-  bill: { total: Decimal; billGst: Decimal; method: PaymentMethod },
+  bill: {
+    total: Decimal;
+    billGst: Decimal;
+    method: PaymentMethod;
+    createdAt: Date;
+    businessDate: string;
+  },
   issues: Issues,
   ref: string,
 ): RefundPlan | null {
@@ -39,7 +48,8 @@ export function planRefund(
   if (refunded.isZero() && refundedLines.length === 0) {
     return null;
   }
-  if (!refunded.isPositive() || refunded.greaterThan(bill.total)) {
+  // greaterThan, not isPositive: decimal.js counts zero as positive.
+  if (!refunded.greaterThan(0) || refunded.greaterThan(bill.total)) {
     issues.block(
       'refund-mismatch',
       ref,
@@ -68,5 +78,7 @@ export function planRefund(
       quantity: line.refundedQuantity,
       amount: shares[index] ?? ZERO,
     })),
+    createdAt: bill.createdAt,
+    businessDate: bill.businessDate,
   };
 }

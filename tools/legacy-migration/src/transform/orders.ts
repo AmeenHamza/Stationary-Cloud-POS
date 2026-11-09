@@ -25,6 +25,7 @@ export interface OrderPlan {
   discountValue: Decimal;
   subtotal: Decimal;
   discountTotal: Decimal;
+  itemDiscountTotal: Decimal;
   productTaxTotal: Decimal;
   billGstRate: Decimal | null;
   billGstAmount: Decimal;
@@ -84,13 +85,15 @@ function planOrder(row: LegacyRow<'orders'>, context: OrderContext): OrderPlan |
   }
   const subtotal = sum(lines.map((line) => line.lineGross));
   const discountTotal = sum(lines.map((line) => line.lineDiscount));
+  const itemDiscountTotal = sum(lines.map((line) => line.itemDiscount));
   const productTaxTotal = sum(lines.map((line) => line.lineTax));
   const gst = billGstOf(row, context.shopGstRate, issues, ref);
   const total = subtotal.minus(discountTotal).plus(productTaxTotal).plus(gst.amount);
   const payments = context.paymentsOf(legacyId);
-  checkPayments(method, payments, issues, ref);
+  checkPayments(method, payments, total, issues, ref);
   const oldTotal = oldTotalOf(row, payments, issues, ref);
-  if (oldTotal?.minus(total).abs().greaterThan('0.01') === true) {
+  // Exact: a migrated bill must total what the old app charged (MAPPING.md §2.4).
+  if (oldTotal !== null && !oldTotal.equals(total)) {
     issues.block(
       'total-mismatch',
       ref,
@@ -98,7 +101,7 @@ function planOrder(row: LegacyRow<'orders'>, context: OrderContext): OrderPlan |
     );
   }
   const refundedTotal = money(row.refundedAmount, issues, ref, 'refunded amount');
-  const terms = discountTermsOf(row, discountTotal, issues, ref);
+  const terms = discountTermsOf(row, billDiscount, issues, ref);
   return {
     id: legacyUuid('order', legacyId),
     legacyId,
@@ -111,6 +114,7 @@ function planOrder(row: LegacyRow<'orders'>, context: OrderContext): OrderPlan |
     discountValue: terms.value,
     subtotal,
     discountTotal,
+    itemDiscountTotal,
     productTaxTotal,
     billGstRate: gst.rate,
     billGstAmount: gst.amount,
@@ -122,7 +126,13 @@ function planOrder(row: LegacyRow<'orders'>, context: OrderContext): OrderPlan |
       legacyId,
       refundedTotal,
       lines,
-      { total, billGst: gst.amount, method },
+      {
+        total,
+        billGst: gst.amount,
+        method,
+        createdAt: when.createdAt,
+        businessDate: when.businessDate,
+      },
       issues,
       ref,
     ),

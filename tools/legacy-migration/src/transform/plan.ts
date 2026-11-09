@@ -1,4 +1,5 @@
 import { planCategories, type CategoryPlan } from './catalog.js';
+import { datedRefunds, planCounters, type CounterPlan } from './counters.js';
 import { Issues } from './issues.js';
 import { planCustomerEntries, planVendorEntries, type LedgerPlan } from './ledgers.js';
 import { cashierNames, planOrders, shopGstRate, type OrderPlan } from './orders.js';
@@ -20,6 +21,8 @@ export interface MigrationPlan {
   orders: OrderPlan[];
   customerEntries: LedgerPlan<CustomerEntryType>[];
   vendorEntries: LedgerPlan<VendorEntryType>[];
+  counters: CounterPlan[];
+  /** The old default Bill GST rate, reported only: the new setting is kept (Q44). */
   shopGstRate: Decimal | null;
   issues: Issues;
   /** Old rows read per table. */
@@ -76,9 +79,10 @@ export function planMigration(data: LegacyData, timeZone: string): MigrationPlan
     products,
     customers: customers.parties,
     vendors: vendors.parties,
-    orders,
+    orders: datedRefunds(orders, customerEntries),
     customerEntries,
     vendorEntries,
+    counters: planCounters(orders),
     shopGstRate: gstRate,
     issues,
     read,

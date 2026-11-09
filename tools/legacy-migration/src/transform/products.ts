@@ -1,6 +1,6 @@
 import { Decimal, normalizeNameKey } from '@pos/domain';
 
-import { capped, flag, integer, legacyUuid, money, text } from './values.js';
+import { capped, flag, instant, integer, legacyUuid, money, text } from './values.js';
 
 import type { Issues } from './issues.js';
 import type { LegacyRow } from '../legacy/schema-map.js';
@@ -25,6 +25,8 @@ export interface ProductPlan {
   lowStockThresholdUnit: SaleUnit;
   stockPieces: number;
   archived: boolean;
+  createdAt: Date | null;
+  updatedAt: Date | null;
 }
 
 type Row = LegacyRow<'products'>;
@@ -160,6 +162,8 @@ export function planProducts(
       lowStockThresholdUnit: low.unit,
       stockPieces: stockOf(row, price.salePrice, issues, ref),
       archived,
+      createdAt: instant(row.createdAt),
+      updatedAt: instant(row.updatedAt),
     };
   });
 }

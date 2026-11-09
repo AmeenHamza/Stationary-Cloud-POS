@@ -3,48 +3,37 @@
 For the owner and the developer together. Plan: DEPLOYMENT.md §11. The old system is only **read** by the
 migration and stays available, read-only, for 30 days.
 
-> **Blocked until the owner shares the old database schema (Q27).** The migration tool
-> (`tools/legacy-migration`) handles everything on the new side; it needs the old table and column names
-> to read the old data. Sections 1 and 2 cannot start before that.
+> **Done 2026-11-10:** the owner stopped billing in the old system, and the data was migrated into production
+> and validated (36/36 checks, `verify` valid). The rest of this page stays as the record and for a re-run.
+>
+> **Before that:** the old schema is mapped
+> ([MAPPING.md](../../tools/legacy-migration/MAPPING.md)), the tool is built, and a rehearsal with the real
+> old data into a local database passed every check
+> ([VALIDATION.md](../../tools/legacy-migration/VALIDATION.md)). Until the final run, nobody enters
+> products, customers or bills in the new system: the tool refuses to merge into a database that already has
+> them. Commands and recovery: [tools/legacy-migration/README.md](../../tools/legacy-migration/README.md).
 
-## 1. Before cutover (weeks ahead)
+## 1. Before cutover
 
-1. The owner runs these two read-only queries in the old project's Neon SQL editor and shares both results
-   (Q27). They list table names, column names and keys only; no shop data is read.
-
-   ```sql
-   SELECT table_name, column_name, data_type, is_nullable
-   FROM information_schema.columns
-   WHERE table_schema = 'public'
-   ORDER BY table_name, ordinal_position;
-
-   SELECT tc.table_name, tc.constraint_type, kcu.column_name, ccu.table_name AS references_table
-   FROM information_schema.table_constraints tc
-   JOIN information_schema.key_column_usage kcu
-     ON kcu.constraint_schema = tc.constraint_schema AND kcu.constraint_name = tc.constraint_name
-   LEFT JOIN information_schema.constraint_column_usage ccu
-     ON ccu.constraint_schema = tc.constraint_schema AND ccu.constraint_name = tc.constraint_name
-     AND tc.constraint_type = 'FOREIGN KEY'
-   WHERE tc.table_schema = 'public' AND tc.constraint_type IN ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE')
-   ORDER BY tc.table_name, tc.constraint_type, kcu.column_name;
-   ```
-2. The developer writes the old-to-new mapping (`tools/legacy-migration/src/legacy/schema-map.ts`) and runs
-   the tests against a fixture built from that schema (MIG-01 to MIG-05).
-3. The owner runs a **dry run** on their own machine with a read-only connection to the old database (the
-   developer supplies the exact command with the tool). It changes nothing. It reports counts, duplicate barcodes (Q35), implausible values (Q19) and totals.
-4. The owner fixes data in the old app where the report says so, or accepts the default handling.
-5. **Rehearsal on staging:** a full migration into staging, `cli:verify-integrity` must pass, then staff
-   training on staging. The owner signs off the rehearsal.
+1. **Done 2026-11-10:** the old schema was read directly (Q27), the mapping written, and MIG-01 to MIG-05
+   pass against a fixture built from it.
+2. **Dry run** (`migrate dry-run`): reads the old database and changes nothing. It reports planned rows,
+   duplicate barcodes (Q35), implausible values (Q19), totals, and the fingerprint `apply` needs.
+3. The owner fixes data in the old app where the report shows a blocking finding, or accepts the default
+   handling of the others.
+4. **Rehearsal:** `apply` into a copy of the new database, validation must pass, then a look at the app on
+   it. Done locally on 2026-11-10 (36 of 36 checks; bills, receipts, khatas and the dashboard checked through
+   the API). A rehearsal on a Neon branch of production, with staff training, is still open.
 
 ## 2. Cutover (after closing time)
 
 | Step | Who | Check |
 |---|---|---|
 | Stop billing on the old system; note the last bill number of each counter | Owner | — |
-| Final dry run | Owner | Counts match the old app's screens |
+| Final dry run: `migrate dry-run` | Owner | No blocking finding; counts match the old app's screens |
 | Create a Neon branch `pre-cutover-<date>` from production | Developer | Branch exists |
-| Real migration into production | Developer | Verification report matches exactly (counts, stock, khata balances, bill totals) |
-| `cli:verify-integrity` on production | Developer | Every line `PASS` |
+| `migrate apply --confirm <fingerprint>` into production | Owner or developer | Outcome starts with `MIGRATED`; every check PASS in `report.md` |
+| `migrate verify` and `cli:verify-integrity` on production | Developer | Both pass |
 | Create staff accounts; set up counters ([counter-pc-setup.md](counter-pc-setup.md)) | Owner | Each cashier signs in |
 | Smoke test: sign in, scan, check a customer's khata balance against the old app, cancel before payment | Owner | All as expected |
 

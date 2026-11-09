@@ -420,7 +420,7 @@ Q13 → D-23 · Q15 → D-18 · Q16 → D-19 (clone only) · Q17 → D-22 (scope
 | Q24 | Date and number format; Urdu UI | `DD/MM/YYYY`, 12-hour time, "Rs" with 2 decimals; English UI with Urdu product names |
 | Q25 | Manual Udhaar fields; advance balances | Amount + note; advance (negative) balances allowed and shown as "advance" |
 | Q26 | Business settings | Shop name, address, phone, receipt footer, default Bill GST rate |
-| Q27 | Old database schema for migration | Owner runs a schema-only query (table and column names, no data) and shares the output |
+| Q27 | Old database schema for migration | **Answered 2026-11-10:** the owner gave read-only access; the schema and a data profile (counts and sums, no personal data) are in [tools/legacy-migration/MAPPING.md](tools/legacy-migration/MAPPING.md) |
 | Q28 | Which period does a refund reduce? | The refund's own date (closed days never change); bill lists still show each bill's refunded amount |
 | Q29 | Base unit options (old dropdown showed only "Piece") | Free-text label, default "Piece", with suggestions from existing values |
 | Q30 | What the dashboard "GST Summary" includes | Product tax + Bill GST |
@@ -434,6 +434,10 @@ Q13 → D-23 · Q15 → D-18 · Q16 → D-19 (clone only) · Q17 → D-22 (scope
 | Q38 | AI defaults the old app leaves open (F-29) | Purchase recommendations use the 45-day sales rate to cover the next 30 days: `piecesFor30Days` = rate × 30 − stock, and estimated cost = that × cost price (none without a cost price). Discount advice looks at products in stock by their last 30 days of sales. The Daily report covers today, Weekly the last 7 days and Monthly the last 30 days, each ending today. Chat history is not stored. Answers are cached for 15 minutes (a "Saved answer" badge says so) |
 | Q39 | How item discounts work (D-27) | Same kinds as the overall discount: flat Rs or percentage. A flat amount comes off the item's whole line, not each unit. Item discounts come off first and the overall discount applies to what is left, so its percentage or flat limit uses that amount (Rs 1,000 with 10 % off + Rs 500, then 10 % overall: 100, then 140 of the remaining 1,400, total Rs 1,260). Taxes are charged after both (D-08). Custom items can have one too. Needs `sales:discount`, like the overall discount |
 | Q40 | Which bills a khata can regenerate (F-40) | Bills linked to the customer: their Udhaar bills. Cash and other bills are not linked to a customer at the counter, so they are reprinted from order history by bill number. The bill is rebuilt from what was stored, so a later price change or refund does not alter it |
+| Q41 | Migration: 20 old customers have loyalty points, and the new system has no loyalty feature | **Owner, 2026-11-10: as proposed.** Not migrated; the old database keeps them |
+| Q42 | Migration: 4 old khata payments (Rs 6,225) have no payment method, and the new system requires one | **Owner, 2026-11-10: as proposed.** Recorded as Cash and listed in the migration report |
+| Q43 | Migration: the old app did not record refund dates, but reports count a refund on its own date (Q28) | **Owner, 2026-11-10: as proposed.** A migrated refund takes its bill's date; a refunded Udhaar bill uses the date of its khata credit |
+| Q44 | Migration: the old default Bill GST rate is 18 %, the new setting is 0 % | **Owner, 2026-11-10: as proposed.** Keep the new setting; the report shows the old value |
 
 **Proposed additions (not in the old app; build only if the owner agrees)**
 
@@ -451,7 +455,7 @@ Q13 → D-23 · Q15 → D-18 · Q16 → D-19 (clone only) · Q17 → D-22 (scope
 | Discovery — audit | Done with screenshots only; see the audit document |
 | Discovery — feature inventory | Updated with owner decisions D-01–D-26; open items in §6 have defaults |
 | Design stage — technical documents | Written 2026-10-28; awaiting owner review |
-| Implementation | IMPLEMENTATION_PLAN.md phases 1–12 and 14 done (every feature except F-36, and the network verification: about 64 MB/month at 1,500 bills). Phase 15's local part is done (security review, runbooks, backup workflow); deployment waits for U-01–U-07. Phase 13 (F-36) waits for the old schema (Q27). Per-feature status in §8 |
+| Implementation | IMPLEMENTATION_PLAN.md phases 1–12 and 14 done (every feature except F-36, and the network verification: about 64 MB/month at 1,500 bills). Phase 15's local part is done (security review, runbooks, backup workflow); deployment waits for U-01–U-07. Phase 13 (F-36) is done: the old data was migrated into production on 2026-11-10 and validated. Per-feature status in §8 |
 
 ---
 
@@ -496,7 +500,7 @@ results, compliance audit, limitations). Infrastructure phases 1–6 are tracked
 | F-11 | Product import, template, exports | F-08 | 11 | TESTING (legacy headers added; integration pending) | [F-11](docs/progress/F-11.md) |
 | F-30 | Groq key management | F-04 | 12 | COMPLETE | [F-30](docs/progress/F-30.md) |
 | F-29 | AI Assistant (6 features) | F-07, F-30 | 12 | COMPLETE | [F-29](docs/progress/F-29.md) |
-| F-36 | Legacy data migration | all data features, Q27 | 13 | BLOCKED (needs old schema, Q27) | — |
+| F-36 | Legacy data migration | all data features, Q27 | 13 | COMPLETE (migrated into production 2026-11-10, 36/36 checks) | [F-36](docs/progress/F-36.md) |
 | F-38 | Terminal list view | F-18 | Owner update | COMPLETE | [F-38](docs/progress/F-38.md) |
 | F-39 | Item discount | F-20 | Owner update | COMPLETE | [F-39](docs/progress/F-39.md) |
 | F-40 | Regenerate a customer's bill | F-23, F-25 | Owner update | COMPLETE | [F-40](docs/progress/F-40.md) |

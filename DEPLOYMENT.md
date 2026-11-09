@@ -255,8 +255,8 @@ data intact.
 
 ## 11. Cutover from the old system
 
-1. The owner shares the old schema (table and column names only, Q27). The developer writes
-   `tools/legacy-migration/src/legacy/schema-map.ts` and a fixture DB for MIG tests.
+1. The owner shares the old schema (Q27; done 2026-11-10, see `tools/legacy-migration/MAPPING.md`). The
+   developer corrects `tools/legacy-migration/src/legacy/schema-map.ts` and builds a fixture DB for MIG tests.
 2. The owner runs `--dry-run` against the old Neon DB and reviews the report (duplicates Q35, implausible
    values Q19, mismatched totals). They fix data in the old app, or approve the default handling.
 3. Rehearsal: a full migration into the **staging** branch; staff training on staging.
