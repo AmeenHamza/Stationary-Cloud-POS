@@ -71,9 +71,9 @@ describe('AI guards (API.md §4, §8; SYSTEM_DESIGN.md §8)', () => {
     ]);
   });
 
-  it('fails closed with AI_UNAVAILABLE while Redis is down (rate limit `ai`)', async () => {
+  it('keeps answering while Redis is down: the `ai` limit counts in memory (ADR-049)', async () => {
     await t.h.cutRedis();
-    expect(errorCode(await t.run('DISCOUNT_ADVICE', 'ENGLISH'))).toBe('AI_UNAVAILABLE');
+    expect((await t.run('DISCOUNT_ADVICE', 'ENGLISH')).body.errors).toBeUndefined();
     t.h.redisProxy.restore();
     await t.h.redisReady();
     expect((await t.run('DISCOUNT_ADVICE', 'ENGLISH')).body.errors).toBeUndefined();

@@ -259,8 +259,8 @@ record of a permitted type. IDs are validated as UUIDs, so malformed ids never r
 AI mutations return `AiResult { text: String! language: AiLanguage! generatedAt: DateTime! cached: Boolean! }`.
 `text` is Markdown (headings, lists, tables). `cached` means the answer came from the 15-minute cache. `aiAsk` history turns are
 `{ role: AiChatRole, text }`; `aiBusinessReport` needs `from`/`to` only for `CUSTOM` (not after today). Errors:
-`AI_NOT_CONFIGURED` (no key, or Groq refused it), `AI_UNAVAILABLE` (provider down, timeout, Redis down for the
-`ai` limit), `RATE_LIMITED` (30 per hour, cached answers included).
+`AI_NOT_CONFIGURED` (no key, or Groq refused it), `AI_UNAVAILABLE` (provider down or timeout),
+`RATE_LIMITED` (30 per hour, cached answers included; counted in memory while Redis is down, ADR-049).
 They are mutations on purpose: reconnect reconciliation refetches active **queries** and must never repeat a
 paid AI call (ADR-026).
 
@@ -316,11 +316,11 @@ value reads exactly like a queried one. Budget: ≤ 1 KB per event (NETWORK_OPTI
 
 | Type | GraphQL type | Audience | Payload fields | Emitted by | Client action (`lib/realtime/handlers/*`) |
 |---|---|---|---|---|---|
-| `stock.changed` | `StockChangedEvent` | staff | `items[{ productId, stockPieces, isLowStock, version }]` | sale, refund, restock, adjust, create/clone with stock | Patch cached `Product` if `version` is newer; cart re-evaluates warnings |
+| `stock.changed` | `StockChangedEvent` | staff | `items[{ productId, stockPieces, isLowStock, version }]`; a transaction touching more products than fit in 1 KB (about 10) sends several of these events (ADR-049) | sale, refund, restock, adjust, create/clone with stock | Patch cached `Product` if `version` is newer; cart re-evaluates warnings |
 | `product.changed` | `ProductChangedEvent` | staff | `change` (`CREATED`/`UPDATED`/`ARCHIVED`/`RESTORED`/`DELETED`), `productId`, `version`, `product: ProductSnapshot` (all public fields, no `costPrice`; **null** when deleted, or when the snapshot would push the event over 1 KB) | product commands | `writeFragment` if newer (a category move drops the cached `categoryName`); null snapshot → evict, mounted screens re-read. `ARCHIVED` patches `archivedAt`; lists drop it on the next fetch. `DELETED`: cached lists drop it and open carts remove it. `CREATED`: no list insertion |
 | `catalog.bulkChanged` | `CatalogBulkChangedEvent` | staff | `reason: IMPORT`, `importJobId`, `changedCount` | import completion | Evict `products`/`categories` root fields; refetch active queries |
 | `category.changed` | `CategoryChangedEvent` | staff | `change` (`CREATED`/`UPDATED`/`DELETED`), `categoryId`, `category: CategorySnapshot` (null when deleted) | category commands | Patch or evict; refetch active `categories` (counts) and, after a rename or delete, the active `products` page |
-| `lowStock.countChanged` | `LowStockCountChangedEvent` | admin | `crossedProductIds[]` (a signal, so concurrent transactions cannot publish counts out of order) | in the transaction, when any product crossed its threshold | Coalesced refetch of `lowStockCount` (sidebar badge) and the active low-stock page |
+| `lowStock.countChanged` | `LowStockCountChangedEvent` | admin | `crossedProductIds[]` (a signal, so concurrent transactions cannot publish counts out of order; split like `stock.changed` above 1 KB) | in the transaction, when any product crossed its threshold | Coalesced refetch of `lowStockCount` (sidebar badge) and the active low-stock page |
 | `order.created` | `OrderCreatedEvent` | admin | `orderId`, `billNumber`, `total`, `paymentMethod`, `businessDate`, `createdAt` | `createSale` | Orders screen: "N new orders" banner (`lib/realtime/new-orders.ts`), no refetch. Dashboard (Phase 10): coalesced refetch of `dashboard.today` |
 | `order.refunded` | `OrderRefundedEvent` | staff | `orderId`, `status`, `refundedTotal`, `version` | `refundOrder` | Patch the cached `Order` if newer (order lists update in place); dashboard coalesced refetch (Phase 10) |
 | `customer.balanceChanged` | `CustomerBalanceChangedEvent` | staff | `customerId`, `balance`, `version` | credit sale, payment, manual credit, refund credit | Patch `Customer.balance` (lists, khata headers). An open ledger is refetched (coalesced, mounted query only) |
@@ -387,8 +387,8 @@ Buckets live in `apps/api/src/infrastructure/rate-limit/buckets.ts`. Exceeding o
 | `ws-connect` | IP | 30 / min | In-memory per instance |
 | `default` | user (IP if anonymous) | 600 / min | **Fail open** (logged) |
 | `sale` | user | 120 / min on `createSale` and `refundOrder` | **Fail open**, never blocks billing |
-| `ai` | user | 30 / hour | Fail closed (`AI_UNAVAILABLE`) |
-| `export` | user | 20 / hour | Fail closed |
+| `ai` | user | 30 / hour | In-memory per instance (ADR-049; it failed closed before 2026-11-10) |
+| `export` | user | 20 / hour | In-memory per instance (ADR-049; it failed closed before 2026-11-10) |
 | `import` | user | 10 / hour | In-memory per instance (uploads still stage while Redis is down, ADR-020, RED-08) |
 
 ---

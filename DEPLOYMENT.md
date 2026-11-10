@@ -136,6 +136,11 @@ notify-keyspace-events ""          # not used
   `TEST_REDIS_URL`; tests flush it. An Upstash deployment has not yet been verified: confirm Pub/Sub, BullMQ
   blocking commands and Lua scripts, `INFO`, no-eviction, connection limits, latency and realtime recovery
   before relying on it in production.
+- **Command quota (ADR-049):** the Upstash free database ran out of its 500,000 monthly commands on
+  2026-11-10, shared by production and the development PC. Prefer a Redis with no command cap, such as
+  Render's free Key Value in the API's region (internal URL; in-memory only, which is acceptable because Redis
+  holds no records). Point local development at the WSL Redis instead of production's: one Redis per
+  environment. The Redis must support blocking commands, Lua and Pub/Sub, with `noeviction`.
 - **Version:** pinned image tag. Upgrades go through Renovate, staging first; a restart loses only cache and
   queue state (SYSTEM_DESIGN.md §6.5).
 - **Verify at Phase 4:** BullMQ's Lua scripts and `INFO` work under the ACL above; adjust command categories

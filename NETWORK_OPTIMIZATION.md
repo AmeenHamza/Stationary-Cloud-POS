@@ -91,7 +91,7 @@ No saving is claimed until measured.
 |---|---|
 | Single event payload | ≤ 1 KB (typical 200–400 B) |
 | Idle session (pings only) | ≤ 1 KB/min |
-| Events per sale received by another counter | ≤ 3 |
+| Events per sale received by another counter | ≤ 3 for a bill of up to about 10 products; each further 10 or so add one `stock.changed` of ≤ 1 KB (ADR-049) |
 
 ### 4.4 Static assets and requests (M4, request counts)
 

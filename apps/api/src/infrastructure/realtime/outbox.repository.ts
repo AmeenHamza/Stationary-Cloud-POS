@@ -33,13 +33,16 @@ export class OutboxRepository {
     @Inject(PRISMA_CLIENT) private readonly prisma: AppPrismaClient,
   ) {}
 
-  /** Inserts inside the caller's transaction; the event exists only if that transaction commits. */
-  async insert(event: Omit<OutboxRow, 'seq' | 'createdAt'>): Promise<bigint> {
-    const row = await this.db.client.outboxEvent.create({
-      data: { ...event, payload: event.payload as Prisma.InputJsonValue },
+  /**
+   * Inserts inside the caller's transaction, in one statement however many events there are; the
+   * events exist only if that transaction commits.
+   */
+  async insertAll(events: readonly Omit<OutboxRow, 'seq' | 'createdAt'>[]): Promise<bigint[]> {
+    const rows = await this.db.client.outboxEvent.createManyAndReturn({
+      data: events.map((event) => ({ ...event, payload: event.payload as Prisma.InputJsonValue })),
       select: { seq: true },
     });
-    return row.seq;
+    return rows.map((row) => row.seq);
   }
 
   findUnpublished(seqs: readonly bigint[]): Promise<OutboxRow[]> {

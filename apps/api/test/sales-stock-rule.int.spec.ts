@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { MAX_EVENT_BYTES } from '@pos/contracts';
+
 import { dataOf, errorCode } from './support/graphql-client';
 import { useRoles } from './support/roles';
 import * as sales from './support/sales';
@@ -36,6 +38,43 @@ describe('selling and stock (D-16, FIN-13)', () => {
     expect(await t.prisma.order.count()).toBe(orders);
     expect(await t.prisma.stockMovement.count()).toBe(movements);
     expect(await sales.stockOf(t.prisma, id)).toBe(0);
+  });
+
+  it('sells 11 and 100 lines: stock and low-stock events split, each within 1 KB', async () => {
+    for (const lines of [11, 100]) {
+      // Stock 6, threshold 5: selling 2 of each puts every product below its threshold.
+      const ids = await Promise.all(
+        Array.from({ length: lines }, () => sales.seedProduct(t.prisma, { price: '1', stock: 6 })),
+      );
+      const before = await t.prisma.outboxEvent.aggregate({ _max: { seq: true } });
+      const input = sales.saleInput(
+        ids.map((productId) => ({ productId, quantity: 2 })),
+        { expectedTotal: `${String(lines * 2)}.00` },
+      );
+      dataOf(await sales.sellAsCashier(t, input));
+      const events = await t.prisma.outboxEvent.findMany({
+        where: {
+          seq: { gt: before._max.seq ?? 0n },
+          type: { in: ['stock.changed', 'lowStock.countChanged'] },
+        },
+        select: { type: true, payload: true },
+      });
+      for (const event of events) {
+        expect(Buffer.byteLength(JSON.stringify(event.payload))).toBeLessThanOrEqual(
+          MAX_EVENT_BYTES,
+        );
+      }
+      const of = (type: string, field: string) =>
+        events
+          .filter((event) => event.type === type)
+          .flatMap((event) => (event.payload as Record<string, unknown[]>)[field] ?? []);
+      const stocked = of('stock.changed', 'items') as { productId: string; stockPieces: number }[];
+      expect(stocked.map((item) => item.productId).sort()).toEqual([...ids].sort());
+      expect(stocked.every((item) => item.stockPieces === 4)).toBe(true);
+      expect((of('lowStock.countChanged', 'crossedProductIds') as string[]).sort()).toEqual(
+        [...ids].sort(),
+      );
+    }
   });
 
   it('lets one of two counters sell the last unit and refuses the other', async () => {

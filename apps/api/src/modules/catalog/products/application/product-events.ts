@@ -54,29 +54,28 @@ export class ProductEvents {
     });
   }
 
-  /** One event for all products of one transaction (≤ 100 lines, ≤ 1 KB per API.md §7.2). */
+  /**
+   * The products of one transaction: one event while they fit in 1 KB (about 10 products), several
+   * otherwise (a bill has up to 100 lines, API.md §7.2).
+   */
   async stockChanged(
     views: readonly Pick<ProductView, 'id' | 'stockPieces' | 'isLowStock' | 'version'>[],
   ): Promise<void> {
-    if (views.length === 0) {
-      return;
-    }
-    await this.outbox.add('stock.changed', 'staff', {
-      items: views.map((view) => ({
+    await this.outbox.addSliced(
+      'stock.changed',
+      'staff',
+      'items',
+      views.map((view) => ({
         productId: view.id,
         stockPieces: view.stockPieces,
         isLowStock: view.isLowStock,
         version: view.version,
       })),
-    });
+    );
   }
 
   /** Emitted when products enter or leave the low-stock list (threshold, stock, archive, restore). */
   async lowStockCrossed(productIds: readonly string[]): Promise<void> {
-    if (productIds.length > 0) {
-      await this.outbox.add('lowStock.countChanged', 'admin', {
-        crossedProductIds: [...productIds],
-      });
-    }
+    await this.outbox.addSliced('lowStock.countChanged', 'admin', 'crossedProductIds', productIds);
   }
 }

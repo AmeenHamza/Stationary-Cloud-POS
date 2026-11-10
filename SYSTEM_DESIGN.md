@@ -348,8 +348,8 @@ sequenceDiagram
 | Apollo `pollInterval`, `startPolling` | — | — | **Banned** (lint and script) |
 | `setInterval` anywhere in app code | — | — | **Banned** |
 | `setTimeout` | Only in `lib/timing/*` (web) and `common/time`/backoff helpers (API) | No fetches on timers | Restricted by lint |
-| BullMQ stalled-job checker | 30 s, inside BullMQ | Redis only, no DB, no browser | Library behaviour, documented |
-| BullMQ worker blocking pop | Long-lived blocking command | Redis only | Library behaviour |
+| BullMQ stalled-job checker | 5 min, inside BullMQ (ADR-049) | Redis only, no DB, no browser | Library behaviour, documented |
+| BullMQ worker blocking pop | Blocking command of up to 300 s (`drainDelay`, ADR-049); a new job wakes it at once | Redis only | Library behaviour |
 | ioredis reconnect | Only after a disconnect | No | Yes |
 | Prisma / pg pool | No queries on timers | No | Yes |
 | Next.js `<Link>` prefetch | On viewport/hover, static RSC payloads only | No | Yes |
@@ -450,7 +450,7 @@ Namespace `pos:v1:`. Each environment has its own Redis, so keys carry no enviro
 |---|---|---|
 | Down or unreachable | Session cache | Postgres lookup on every request (≈ +200 B Neon transfer per request) |
 | | Reference/AI cache | Loader called directly |
-| | Rate limiting | Auth buckets: in-memory per instance; `default`/`sale`: fail open; `ai`/`export`/`import`: fail closed |
+| | Rate limiting | Auth, `ai`, `export` and `import` buckets: in-memory per instance (ADR-049); `default`/`sale`: fail open; sign-up: fail closed |
 | | Publish | Outbox rows stay unpublished; drained on `ready` (§5.2) |
 | | Subscribe | No live updates; `system.resyncRequired` after reconnect |
 | | BullMQ | Upload staged as `QUEUED`; `queue.drain.ts` enqueues `QUEUED`/`RUNNING` jobs on `ready` and on startup |
@@ -482,6 +482,7 @@ justified in DECISIONS.md, use `SET NX PX` with a token-checked release, and nev
 
 Queue `product-import`, prefix `pos:v1:bull`. The job id equals `import_jobs.id`, which de-duplicates enqueues.
 Settings: `attempts: 3`, exponential backoff starting at 5 s, `concurrency: 1`, `lockDuration: 60 s`,
+`drainDelay: 300 s` and `stalledInterval: 5 min` (an idle worker's Redis commands, ADR-049),
 `removeOnComplete: { age: 7 days, count: 100 }`, `removeOnFail: { age: 30 days }`. The processor handles
 only rows still `PENDING`, so a retry or re-enqueue never double-applies a row. `QueueRuntime`
 (`infrastructure/queue`) creates the queue and worker only once Redis is ready and caps shutdown at 5 s, so
@@ -519,8 +520,8 @@ the categories cache generation and emits `catalog.bulkChanged`. The failed rows
 
 1. **Request checks.** An admin calls an AI mutation.
    - Zod validation runs first (`@pos/validation` ai.schemas).
-   - Then the rate limit `ai`: 30 per user per hour, cached answers included. It fails closed with
-     `AI_UNAVAILABLE` when Redis is down.
+   - Then the rate limit `ai`: 30 per user per hour, cached answers included. While Redis is down it
+     counts in the instance's memory (ADR-049).
    - Then the Groq key is loaded and decrypted (`SecretBox`, AES-256-GCM). Without a key, or if it can no
      longer be decrypted, the answer is `AI_NOT_CONFIGURED`.
 2. **Cache.** The lookup key is `pos:v1:ai:{feature}:{hash}`, a hash of the inputs, language, business date

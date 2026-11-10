@@ -55,12 +55,21 @@ describe('rate limits (API.md §8, RED-07)', () => {
     expect(codes[5]).toBe('RATE_LIMITED');
   });
 
-  it('Redis down: login is limited in memory, sales are never limited, AI fails closed', async () => {
+  it('Redis down: login, AI and export are limited in memory, sales are never limited', async () => {
     await h.cutRedis();
     expect((await hitTimes('login', 'user-b', 6))[5]).toBe('RATE_LIMITED');
     expect((await hitTimes('sale', 'counter-1', 130)).every((code) => code === null)).toBe(true);
-    expect(await codeOf(limiter.consume('ai', 'user-b'))).toBe('AI_UNAVAILABLE');
-    expect(await codeOf(limiter.consume('export', 'user-b'))).toBe('RATE_LIMITED');
+    for (const [bucket, limit] of [
+      ['ai', 30],
+      ['export', 20],
+    ] as const) {
+      const codes = await hitTimes(bucket, 'user-b', limit + 1);
+      expect(
+        codes.slice(0, limit).every((code) => code === null),
+        bucket,
+      ).toBe(true);
+      expect(codes[limit], bucket).toBe('RATE_LIMITED');
+    }
   });
 });
 

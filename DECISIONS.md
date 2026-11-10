@@ -616,6 +616,29 @@ exposed, and keep it out of source control. Existing admin staff management rema
   on the owner's machine, git-ignored. Nothing is written to the app's `audit_logs` (its action list is
   application code); every migrated row carries `legacy_id`.
 
+### ADR-049 Redis command budget, AI and export without Redis, large bills (2026-11-10)
+- **Context:** production and the development PC used one Upstash free database (500,000 commands a
+  month). On 2026-11-10 it answered every command with `ERR max requests limit exceeded`. Exports and the AI
+  assistant then refused all work (their limits failed closed), BullMQ logged a warning every 100–200 ms, and
+  live updates and imports waited for Redis. Separately, any bill of more than 10 products failed with
+  "Something went wrong": its one `stock.changed` event exceeded 1 KB and `OutboxService` refused it.
+- **Idle BullMQ:** an empty queue cost one blocking `BZPOPMIN` plus one fetch every `drainDelay` (5 s) and a
+  stalled-job check every 30 s: up to about 1.1 million commands a month per running API, which used up the
+  quota. `QueueRuntime` now sets `drainDelay: 300` and `stalledInterval: 300_000` (about 26,000 a month).
+  Adding a job wakes the blocked worker at once, so imports start as before; a job left active by a crashed
+  process is recovered when the next worker starts. Repeated queue errors are logged once a minute per queue.
+- **AI and export limits (owner's choice):** like `login` and `import`, the `ai` (30/h) and `export` (20/h)
+  buckets count in per-instance memory while Redis is down instead of refusing every request.
+- **Large bills:** `stock.changed` and `lowStock.countChanged` are split into several events of at most
+  1 KB each (`OutboxService.addSliced`, written in one INSERT). The 1 KB rule is unchanged. Every item carries
+  its product id and version, so clients apply the slices independently. A bill of up to about 10 products
+  still sends one stock event; each further 10 or so add one (NETWORK_OPTIMIZATION.md §4.3).
+- **Still needs Redis:** live updates between counters (Pub/Sub) and import processing (BullMQ). Upstash's free
+  quota is a tight fit even after this change (ADR-022 already called per-command pricing a poor fit). A Redis
+  with no command cap is recommended, for example Render's free Key Value next to the API: it keeps nothing
+  on restart, which is acceptable because Redis never holds a record (rule 5). Local development should use
+  the WSL Redis, not production's. The choice is the owner's (DEPLOYMENT.md §5).
+
 ## 3. Unresolved decisions (owner input needed; defaults apply until answered)
 
 | ID | Decision | Proposed default | Affects |

@@ -156,8 +156,8 @@ deadline. No real customer data: factories generate fake names and phone numbers
 | RED-04 | Stale-fill race: a slow loader overlaps an invalidation → the stale value is never served |
 | RED-05 | Session tombstone vs. stale fill (`NX`) → a revoked session is never served from cache |
 | RED-06 | Stalled Redis → cache treated as a miss after the 1-second command timeout; request succeeds |
-| RED-07 | Rate limits with Redis down: login limited in memory; sales not limited |
-| RED-08 | Upload while Redis is down → job `QUEUED`, enqueued on `ready`, each row applied exactly once |
+| RED-07 | Rate limits with Redis down: login, AI and export limited in memory; sales not limited (ADR-049) |
+| RED-08 | Upload while Redis is down → job `QUEUED`, enqueued on `ready`, each row applied exactly once; an export still downloads |
 | RED-09 | `maxmemory` tiny → cache writes fail gracefully; no request fails |
 | RED-10 | `/health/ready` returns 200 with `redis: degraded`; `/health/live` touches neither DB nor Redis |
 | RED-11 | Cache never contains stock, orders, ledgers or customer fields (key-scan test after an e2e flow) |

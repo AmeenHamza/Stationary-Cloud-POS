@@ -3,14 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PRISMA_CLIENT, type AppPrismaClient } from '../src/infrastructure/prisma/prisma.module';
 
 import { createUser, loginCookie } from './support/auth';
-import { completion, csv, importEvents, upload } from './support/catalog-io';
+import { completion, csv, download, importEvents, upload } from './support/catalog-io';
 import { startHarness, type Harness } from './support/harness';
 
 /**
  * One API instance in this file: instances in one file share the test Redis (and the import
  * queue) but not the database, so another instance's worker could take this file's job.
  */
-describe('uploads while Redis is down (RED-08, ADR-020)', () => {
+describe('imports and exports while Redis is down (RED-08, ADR-020, ADR-049)', () => {
   let h: Harness;
   let admin = '';
   let adminId = '';
@@ -48,5 +48,17 @@ describe('uploads while Redis is down (RED-08, ADR-020)', () => {
     expect(await completion(events, jobId)).toMatchObject({ succeededRows: 2, failedRows: 0 });
     await events.close();
     expect(await prisma.product.count({ where: { name: { startsWith: 'Queued ' } } })).toBe(2);
+  });
+
+  it('still exports while Redis is down: the `export` limit counts in memory (ADR-049)', async () => {
+    await h.cutRedis();
+    try {
+      const file = await download(h.url, admin, '/v1/exports/products?format=csv');
+      expect(file.status).toBe(200);
+      expect(file.bytes.toString('utf8')).toContain('Queued one');
+    } finally {
+      h.redisProxy.restore();
+      await h.redisReady();
+    }
   });
 });

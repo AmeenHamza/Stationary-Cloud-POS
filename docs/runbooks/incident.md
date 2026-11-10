@@ -20,12 +20,12 @@ thresholds: DEPLOYMENT.md §8.
 |---|---|---|
 | Counters show "Offline: billing paused" | Shop internet down, or the API down | Shop internet: paper bills, entered later (D-05; owner to confirm). API: check Railway status, redeploy the last good image (DEPLOYMENT.md §6 rollback) |
 | `/health/ready` is 503 with `database: down` | Neon unreachable or the password changed | Neon status page; check `DATABASE_URL`. Billing stops until it is back |
-| `redis: degraded` | Redis down or restarting | **Billing keeps working.** Live updates and imports wait; restart the `redis` service. Login still works (memory rate limit) |
+| `redis: degraded` | Redis down or restarting, or out of its command quota (`ERR max requests limit exceeded` in the logs) | **Billing keeps working.** Live updates and imports wait; restart the `redis` service, or move to a Redis without a command cap (ADR-049). Login, exports and AI still work (memory rate limits) |
 | "Live updates paused, reconnecting…" never clears | WebSocket blocked or API restarting | Wait for the deploy to finish; check `pos_ws_connections`; refresh one counter to test |
 | `pos_outbox_unpublished` above 0 for 5 minutes | Redis down or the publisher stuck | Restart `redis`, then `api`. Rows stay in PostgreSQL and are sent on restart; nothing is lost |
 | Sales slow (`CreateSale` p95 above 1.5 s) | Neon compute cold or overloaded, or a lock | Check Neon compute (autosuspend must be off in production, U-04); check the logs for `lock_timeout` |
 | An import job failed | A bad file, or Redis lost the queue | Open the import's failed rows; re-upload after fixing the file |
-| AI says "unavailable" | Groq down, its limit reached, or Redis down | Billing is unaffected. Try later; "not configured" means the key is missing or was refused |
+| AI says "unavailable" | Groq down or its limit reached | Billing is unaffected. Try later; "not configured" means the key is missing or was refused |
 | Wrong totals, stock or balances | A bug or a bad manual change | Run `cli:verify-integrity` (read-only). If data is wrong, follow [restore.md](restore.md) or fix forward with the developer |
 | A secret may have leaked | — | [rotate-secrets.md](rotate-secrets.md), then sign everyone out |
 
